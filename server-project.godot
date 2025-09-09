@@ -1,0 +1,37 @@
+; Engine configuration file for Railway Server
+; This is used when running as headless server
+
+config_version=5
+
+[application]
+
+config/name="Simple FPS Server"
+run/main_scene="res://scenes/ServerMain.tscn"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/tags=PackedStringArray("3d", "multiplayer", "fps", "server")
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="forward_plus"
+
+[layer_names]
+
+3d_physics/layer_1="Player"
+3d_physics/layer_2="Environment" 
+3d_physics/layer_3="Projectiles"
+
+[debug]
+
+gdscript/warnings/enable=true
+gdscript/warnings/unused_variable=false
+gdscript/warnings/unused_local_constant=false
+gdscript/warnings/unused_private_class_variable=false
+gdscript/warnings/unused_parameter=false
+gdscript/warnings/unused_signal=false
+
+[network]
+
+limits/debugger/remote_port=6007
+limits/debugger/max_chars_per_second=32768
+limits/debugger/max_queued_messages=2048

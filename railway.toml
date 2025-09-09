@@ -1,0 +1,12 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "/usr/local/bin/godot --headless --main-pack server.pck"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "always"
+
+[[deploy.environmentVariables]]
+name = "PORT"
+value = "7000"

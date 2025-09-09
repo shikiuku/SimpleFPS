@@ -12,17 +12,14 @@ func _ready():
 	_start_auto_connect()
 
 func _start_auto_connect():
-	# デフォルトサーバーアドレス
-	var server_address = "127.0.0.1"  # ローカルテスト用
+	# Railwayサーバーアドレス（デプロイ後に更新）
+	var server_address = "your-fps-server.railway.app"  # Railway URLに後で変更
 	
-	# プラットフォームに応じて接続方式を決定
-	if OS.get_name() == "Web":
-		status_label.text = "WebSocketサーバーに接続中..."
-		# Web版は外部サーバーが必要
-		server_address = "192.168.1.100"  # 実際のサーバーIPに変更してください
-	else:
-		status_label.text = "サーバーに接続中..."
-		# デスクトップ版はローカルサーバーに接続を試行
+	# テスト用：ローカル開発時
+	if OS.is_debug_build():
+		server_address = "127.0.0.1"  # ローカルテスト用
+	
+	status_label.text = "Railwayサーバーに接続中..."
 	
 	print("MainMenu: ", server_address, " に接続を試行します")
 	
