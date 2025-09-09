@@ -16,33 +16,17 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = -100.0
-offset_right = 100.0
-offset_bottom = 100.0
+offset_left = -150.0
+offset_top = -50.0
+offset_right = 150.0
+offset_bottom = 50.0
 
 [node name="Title" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-text = "Simple FPS Multiplayer"
+text = "Simple FPS Online"
 horizontal_alignment = 1
-
-[node name="HostButton" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-text = "ホストとして開始"
-
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
-layout_mode = 2
-
-[node name="IPInput" type="LineEdit" parent="VBoxContainer"]
-layout_mode = 2
-placeholder_text = "サーバーIP (例: 127.0.0.1)"
-
-[node name="ClientButton" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-text = "クライアントとして接続"
-
 
 [node name="StatusLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-text = ""
+text = "接続準備中..."
 horizontal_alignment = 1

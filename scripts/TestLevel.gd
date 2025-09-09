@@ -4,20 +4,20 @@ extends Node3D
 var player_scene = preload("res://scenes/SimpleFPSPlayer.tscn")
 
 func _ready():
-	print("TestLevel: _ready() 開始")
+	print("TestLevel: _ready() start")
 	# マルチプレイヤーイベントに接続
 	multiplayer.peer_connected.connect(_on_player_connected)
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
 	
 	print("TestLevel ready, multiplayer ID: ", multiplayer.get_unique_id())
 	print("Is server: ", multiplayer.is_server())
-	print("TestLevel: NetworkManagerを呼び出します")
+	print("TestLevel: NetworkManager call")
 	
 	# NetworkManagerに通知
 	if NetworkManager:
 		NetworkManager.notify_test_level_if_ready()
 	else:
-		print("TestLevel: NetworkManagerが見つかりません！")
+		print("TestLevel: NetworkManager not found!")
 
 func _on_player_connected(peer_id: int):
 	print("Player connected: ", peer_id)
@@ -55,19 +55,19 @@ func spawn_player(peer_id: int):
 
 # サーバーが開始されたときに呼び出される
 func start_multiplayer_session():
-	print("TestLevel: start_multiplayer_session() 開始")
+	print("TestLevel: start_multiplayer_session() started")
 	
 	# 自分のプレイヤーを必ず生成（サーバーでもクライアントでも）
 	var my_id = multiplayer.get_unique_id()
-	print("TestLevel: 自分のプレイヤーを生成します ID: ", my_id)
+	print("TestLevel: spawn my player ID: ", my_id)
 	spawn_player(my_id)
 	
 	# サーバーの場合は既存のピアも生成
 	if multiplayer.is_server():
 		for peer_id in multiplayer.get_peers():
-			print("TestLevel: 既存のピア用プレイヤーを生成します ID: ", peer_id)
+			print("TestLevel: spawn existing peer player ID: ", peer_id)
 			spawn_player(peer_id)
 	else:
 		# クライアントの場合はサーバー（ID: 1）も生成
-		print("TestLevel: サーバープレイヤーを生成します ID: 1")
+		print("TestLevel: spawn server player ID: 1")
 		spawn_player(1)

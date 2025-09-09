@@ -28,25 +28,24 @@ func start_host():
 	var error
 	
 	if is_web_platform:
-		# Web版: WebSocketMultiplayerPeer を使用
-		multiplayer_peer = WebSocketMultiplayerPeer.new()
-		error = multiplayer_peer.create_server(PORT)
-		print("Starting WebSocket server on port ", PORT)
+		# Web版ではサーバーホストは無効
+		print("Web版ではサーバーホストはサポートされていません")
+		return
 	else:
 		# デスクトップ版: ENetMultiplayerPeer を使用
 		multiplayer_peer = ENetMultiplayerPeer.new()
 		error = multiplayer_peer.create_server(PORT, MAX_PLAYERS)
-		print("Starting ENet server on port ", PORT)
+		print("ENetサーバーをポート ", PORT, " で開始中...")
 	
 	if error != OK:
-		print("Failed to create server, error code: ", error)
+		print("サーバー作成に失敗しました。エラーコード: ", error)
 		return
 	
 	multiplayer.multiplayer_peer = multiplayer_peer
 	
 	# 同期頻度を上げる
 	Engine.max_fps = 60
-	print("Host started on port ", PORT)
+	print("サーバーが正常に開始されました。ポート: ", PORT)
 	
 	# TestLevelに移動した時にサーバーのプレイヤーをスポーン
 	call_deferred("notify_test_level_if_ready")
@@ -67,28 +66,28 @@ func start_client(address = "127.0.0.1"):
 		multiplayer_peer = WebSocketMultiplayerPeer.new()
 		var url = "ws://" + address + ":" + str(PORT)
 		error = multiplayer_peer.create_client(url)
-		print("Connecting to WebSocket server: ", url)
+		print("WebSocketサーバーに接続中: ", url)
 	else:
 		# デスクトップ版: ENetMultiplayerPeer を使用
 		multiplayer_peer = ENetMultiplayerPeer.new()
 		error = multiplayer_peer.create_client(address, PORT)
-		print("Connecting to ENet server: ", address, ":", PORT)
+		print("ENetサーバーに接続中: ", address, ":", PORT)
 	
 	if error != OK:
-		print("Failed to create client, error code: ", error)
+		print("クライアント作成に失敗しました。エラーコード: ", error)
 		return
 	
 	multiplayer.multiplayer_peer = multiplayer_peer
 	
 	# 同期頻度を上げる
 	Engine.max_fps = 60
-	print("Client connecting...")
+	print("クライアント接続中...")
 	
 	# 接続成功時の処理
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 
 func _on_connected_to_server():
-	print("Connected to server!")
+	print("サーバーに接続しました！")
 
 func notify_test_level_if_ready():
 	# TestLevelシーンにいるかチェック

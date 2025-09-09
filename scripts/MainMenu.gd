@@ -1,67 +1,47 @@
 extends Control
 
-@onready var host_button = $VBoxContainer/HostButton
-@onready var client_button = $VBoxContainer/ClientButton
-@onready var ip_input = $VBoxContainer/IPInput
 @onready var status_label = $VBoxContainer/StatusLabel
 
 func _ready():
-	host_button.pressed.connect(_on_host_button_pressed)
-	client_button.pressed.connect(_on_client_button_pressed)
+	# 自動接続開始
+	status_label.text = "サーバーに自動接続中..."
+	print("MainMenu: 自動接続を開始します")
 	
-	# プラットフォームに応じてデフォルトIPとメッセージを設定
-	if OS.get_name() == "Web":
-		ip_input.text = "192.168.1.100"
-		ip_input.placeholder_text = "例: 192.168.1.100"
-		# Webプラットフォームでは外部接続が必要
-		status_label.text = "Web版：外部のデスクトップサーバーに接続してください"
-		host_button.text = "ホスト（Web版では無効）"
-		host_button.disabled = true
-	else:
-		ip_input.text = "127.0.0.1"
-		status_label.text = "ENetMultiplayerPeer使用（高性能・低遅延）"
+	# 少し待ってから接続開始（UIが表示されるのを待つ）
+	await get_tree().create_timer(1.0).timeout
+	_start_auto_connect()
 
-func _on_host_button_pressed():
-	# Webプラットフォームではサーバーホストは無効
+func _start_auto_connect():
+	# デフォルトサーバーアドレス
+	var server_address = "127.0.0.1"  # ローカルテスト用
+	
+	# プラットフォームに応じて接続方式を決定
 	if OS.get_name() == "Web":
-		status_label.text = "Web版ではサーバーホストはサポートされていません"
-		return
-	
-	status_label.text = "ENetサーバーを開始中..."
-	print("MainMenu: ENet ホストボタンが押されました")
-	
-	# シングルトンのNetworkManagerを使用
-	NetworkManager.start_host()
-	
-	# ゲームシーンに移行
-	await get_tree().create_timer(0.5).timeout
-	print("MainMenu: TestLevelシーンに移行します")
-	get_tree().change_scene_to_file("res://scenes/TestLevel.tscn")
-
-func _on_client_button_pressed():
-	var ip = ip_input.text.strip_edges()
-	if ip.is_empty():
-		status_label.text = "IPアドレスを入力してください"
-		return
-	
-	if OS.get_name() == "Web":
-		status_label.text = "WebSocketで接続中..."
+		status_label.text = "WebSocketサーバーに接続中..."
+		# Web版は外部サーバーが必要
+		server_address = "192.168.1.100"  # 実際のサーバーIPに変更してください
 	else:
-		status_label.text = "ENetで接続中..."
+		status_label.text = "サーバーに接続中..."
+		# デスクトップ版はローカルサーバーに接続を試行
 	
-	# シングルトンのNetworkManagerを使用
-	NetworkManager.start_client(ip)
+	print("MainMenu: ", server_address, " に接続を試行します")
+	
+	# NetworkManagerを使用して接続
+	NetworkManager.start_client(server_address)
 	
 	# 接続成功のシグナルを待機
 	if not multiplayer.connected_to_server.is_connected(_on_connected_to_server):
 		multiplayer.connected_to_server.connect(_on_connected_to_server)
 	
-	# タイムアウト処理
-	await get_tree().create_timer(5.0).timeout
-	if not multiplayer.has_multiplayer_peer():
-		status_label.text = "接続に失敗しました"
+	# タイムアウト処理（10秒）
+	await get_tree().create_timer(10.0).timeout
+	if not multiplayer.has_multiplayer_peer() or not multiplayer.is_connected():
+		status_label.text = "接続に失敗しました - サーバーを開始してください"
+		print("MainMenu: 接続タイムアウト")
 
 func _on_connected_to_server():
 	# 接続成功時にシーン移行
-	status_label.text = "接続成功！"
+	status_label.text = "接続成功！ゲーム開始..."
+	print("MainMenu: サーバー接続成功")
+	await get_tree().create_timer(1.0).timeout
 	get_tree().change_scene_to_file("res://scenes/TestLevel.tscn")
