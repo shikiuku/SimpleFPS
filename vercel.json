@@ -1,18 +1,12 @@
 {
-  "builds": [
+  "rewrites": [
     {
-      "src": "web-build/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/web-build/index.html"
+      "source": "/",
+      "destination": "/web-build/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/web-build/$1"
+      "source": "/(.*)",
+      "destination": "/web-build/$1"
     }
   ],
   "headers": [
