@@ -17,7 +17,7 @@ func _ready():
 	# 重力を有効にする
 	gravity_scale = 1.0
 
-func _physics_process(delta):
+func _physics_process(_delta):
 	# 地面の下に落ちすぎたら削除
 	if global_position.y < -50:
 		queue_free()
