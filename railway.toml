@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "/usr/local/bin/godot --headless --main-pack server.pck"
+startCommand = "/usr/local/bin/godot --headless --path /app res://scenes/ServerMain.tscn"
 restartPolicyType = "always"
 
 [[deploy.environmentVariables]]

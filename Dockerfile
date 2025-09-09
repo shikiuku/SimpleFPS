@@ -6,6 +6,11 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     ca-certificates \
+    libfontconfig1 \
+    libfreetype6 \
+    libgl1-mesa-glx \
+    libasound2 \
+    libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Godot Headless バイナリをダウンロード
@@ -24,5 +29,5 @@ COPY . .
 # ポートを公開
 EXPOSE $PORT
 
-# サーバーを起動（プロジェクトファイルを直接実行）
-CMD ["/usr/local/bin/godot", "--headless", "--main-pack", "."]
+# サーバーを起動（プロジェクト設定を使用してServerMainシーンを実行）
+CMD ["/usr/local/bin/godot", "--headless", "--path", "/app", "res://scenes/ServerMain.tscn"]
