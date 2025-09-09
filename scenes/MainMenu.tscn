@@ -41,6 +41,7 @@ placeholder_text = "サーバーIP (例: 127.0.0.1)"
 layout_mode = 2
 text = "クライアントとして接続"
 
+
 [node name="StatusLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 text = ""

@@ -9,14 +9,17 @@ func _ready():
 	host_button.pressed.connect(_on_host_button_pressed)
 	client_button.pressed.connect(_on_client_button_pressed)
 	
-	# プラットフォームに応じてデフォルトIPを設定
+	# プラットフォームに応じてデフォルトIPとメッセージを設定
 	if OS.get_name() == "Web":
-		ip_input.text = "外部サーバーのIPを入力してください"
+		ip_input.text = "192.168.1.100"
 		ip_input.placeholder_text = "例: 192.168.1.100"
 		# Webプラットフォームでは外部接続が必要
 		status_label.text = "Web版：外部のデスクトップサーバーに接続してください"
+		host_button.text = "ホスト（Web版では無効）"
+		host_button.disabled = true
 	else:
 		ip_input.text = "127.0.0.1"
+		status_label.text = "ENetMultiplayerPeer使用（高性能・低遅延）"
 
 func _on_host_button_pressed():
 	# Webプラットフォームではサーバーホストは無効
@@ -24,8 +27,8 @@ func _on_host_button_pressed():
 		status_label.text = "Web版ではサーバーホストはサポートされていません"
 		return
 	
-	status_label.text = "ホストを開始中..."
-	print("MainMenu: ホストボタンが押されました")
+	status_label.text = "ENetサーバーを開始中..."
+	print("MainMenu: ENet ホストボタンが押されました")
 	
 	# シングルトンのNetworkManagerを使用
 	NetworkManager.start_host()
@@ -41,7 +44,10 @@ func _on_client_button_pressed():
 		status_label.text = "IPアドレスを入力してください"
 		return
 	
-	status_label.text = "接続中..."
+	if OS.get_name() == "Web":
+		status_label.text = "WebSocketで接続中..."
+	else:
+		status_label.text = "ENetで接続中..."
 	
 	# シングルトンのNetworkManagerを使用
 	NetworkManager.start_client(ip)
@@ -57,4 +63,5 @@ func _on_client_button_pressed():
 
 func _on_connected_to_server():
 	# 接続成功時にシーン移行
+	status_label.text = "接続成功！"
 	get_tree().change_scene_to_file("res://scenes/TestLevel.tscn")
