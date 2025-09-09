@@ -13,6 +13,18 @@ config_version=5
 config/name="Simple FPS"
 run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
+config/tags=PackedStringArray("3d", "multiplayer", "fps")
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="forward_plus"
+
+[layer_names]
+
+3d_physics/layer_1="Player"
+3d_physics/layer_2="Environment"
+3d_physics/layer_3="Projectiles"
 
 [autoload]
 

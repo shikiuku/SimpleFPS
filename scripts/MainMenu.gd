@@ -9,10 +9,21 @@ func _ready():
 	host_button.pressed.connect(_on_host_button_pressed)
 	client_button.pressed.connect(_on_client_button_pressed)
 	
-	# デフォルトIP
-	ip_input.text = "127.0.0.1"
+	# プラットフォームに応じてデフォルトIPを設定
+	if OS.get_name() == "Web":
+		ip_input.text = "外部サーバーのIPを入力してください"
+		ip_input.placeholder_text = "例: 192.168.1.100"
+		# Webプラットフォームでは外部接続が必要
+		status_label.text = "Web版：外部のデスクトップサーバーに接続してください"
+	else:
+		ip_input.text = "127.0.0.1"
 
 func _on_host_button_pressed():
+	# Webプラットフォームではサーバーホストは無効
+	if OS.get_name() == "Web":
+		status_label.text = "Web版ではサーバーホストはサポートされていません"
+		return
+	
 	status_label.text = "ホストを開始中..."
 	print("MainMenu: ホストボタンが押されました")
 	

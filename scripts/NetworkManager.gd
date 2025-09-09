@@ -5,9 +5,18 @@ extends Node
 const PORT = 7000
 const MAX_PLAYERS = 8
 
+# プラットフォーム判定
+var is_web_platform: bool
+
 func _ready():
-	# 手動でstart_host()またはstart_client()を呼び出すまで待機
-	pass
+	# Webプラットフォームかどうかを判定
+	is_web_platform = OS.get_name() == "Web"
+	print("Platform: ", OS.get_name(), " (is_web: ", is_web_platform, ")")
+	
+	if is_web_platform:
+		print("Web platform detected - using WebSocketMultiplayerPeer")
+	else:
+		print("Desktop platform detected - using ENetMultiplayerPeer")
 
 func start_host():
 	# 既にマルチプレイヤーがアクティブな場合は完全にリセット
@@ -15,9 +24,20 @@ func start_host():
 		multiplayer.multiplayer_peer = null
 		await get_tree().process_frame
 	
-	# 新しいピアを作成
-	var multiplayer_peer = ENetMultiplayerPeer.new()
-	var error = multiplayer_peer.create_server(PORT, MAX_PLAYERS)
+	var multiplayer_peer
+	var error
+	
+	if is_web_platform:
+		# Web版: WebSocketMultiplayerPeer を使用
+		multiplayer_peer = WebSocketMultiplayerPeer.new()
+		error = multiplayer_peer.create_server(PORT)
+		print("Starting WebSocket server on port ", PORT)
+	else:
+		# デスクトップ版: ENetMultiplayerPeer を使用
+		multiplayer_peer = ENetMultiplayerPeer.new()
+		error = multiplayer_peer.create_server(PORT, MAX_PLAYERS)
+		print("Starting ENet server on port ", PORT)
+	
 	if error != OK:
 		print("Failed to create server, error code: ", error)
 		return
@@ -39,9 +59,21 @@ func start_client(address = "127.0.0.1"):
 		multiplayer.multiplayer_peer = null
 		await get_tree().process_frame
 	
-	# 新しいピアを作成
-	var multiplayer_peer = ENetMultiplayerPeer.new()
-	var error = multiplayer_peer.create_client(address, PORT)
+	var multiplayer_peer
+	var error
+	
+	if is_web_platform:
+		# Web版: WebSocketMultiplayerPeer を使用
+		multiplayer_peer = WebSocketMultiplayerPeer.new()
+		var url = "ws://" + address + ":" + str(PORT)
+		error = multiplayer_peer.create_client(url)
+		print("Connecting to WebSocket server: ", url)
+	else:
+		# デスクトップ版: ENetMultiplayerPeer を使用
+		multiplayer_peer = ENetMultiplayerPeer.new()
+		error = multiplayer_peer.create_client(address, PORT)
+		print("Connecting to ENet server: ", address, ":", PORT)
+	
 	if error != OK:
 		print("Failed to create client, error code: ", error)
 		return
@@ -50,7 +82,7 @@ func start_client(address = "127.0.0.1"):
 	
 	# 同期頻度を上げる
 	Engine.max_fps = 60
-	print("Connecting to ", address, ":", PORT)
+	print("Client connecting...")
 	
 	# 接続成功時の処理
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
