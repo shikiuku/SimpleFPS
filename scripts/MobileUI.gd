@@ -19,7 +19,6 @@ signal jump_pressed
 var joystick_touch_id = -1
 var view_touch_id = -1
 var active_touch_ids = {}  # アクティブなタッチを追跡
-var button_touch_ids = []  # ボタンのタッチIDを追跡
 var is_any_button_pressed = false  # いずれかのボタンが押されているか
 
 # ジョイスティック設定
@@ -68,7 +67,9 @@ func _cleanup_all_touches():
 	joystick_touch_id = -1
 	view_touch_id = -1
 	active_touch_ids.clear()
-	button_touch_ids.clear()
+	is_any_button_pressed = false
+	shoot_button_pressed = false
+	jump_button_pressed = false
 	_reset_knob()
 	move_input.emit(Vector2.ZERO)
 
@@ -213,19 +214,26 @@ func _on_jump_pressed():
 	print("JUMP BUTTON PRESSED!")
 	jump_pressed.emit()
 
-# ボタン状態の追跡
+# ボタン状態の追跡（改善版）
+var shoot_button_pressed = false
+var jump_button_pressed = false
+
 func _on_shoot_button_down():
+	shoot_button_pressed = true
 	is_any_button_pressed = true
 	print("Shoot button DOWN - reducing view sensitivity")
 
 func _on_shoot_button_up():
-	is_any_button_pressed = false
-	print("Shoot button UP - restoring view sensitivity")
+	shoot_button_pressed = false
+	is_any_button_pressed = jump_button_pressed  # 他のボタンがまだ押されているかチェック
+	print("Shoot button UP - view sensitivity: ", "reduced" if is_any_button_pressed else "normal")
 
 func _on_jump_button_down():
+	jump_button_pressed = true
 	is_any_button_pressed = true
 	print("Jump button DOWN - reducing view sensitivity")
 
 func _on_jump_button_up():
-	is_any_button_pressed = false
-	print("Jump button UP - restoring view sensitivity")
+	jump_button_pressed = false
+	is_any_button_pressed = shoot_button_pressed  # 他のボタンがまだ押されているかチェック
+	print("Jump button UP - view sensitivity: ", "reduced" if is_any_button_pressed else "normal")

@@ -16,6 +16,54 @@ corner_radius_top_right = 15
 corner_radius_bottom_right = 15
 corner_radius_bottom_left = 15
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shoot_button"]
+bg_color = Color(1, 0.2, 0.2, 0.8)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.5, 0.5, 0.9)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shoot_button_pressed"]
+bg_color = Color(0.8, 0.1, 0.1, 0.9)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.3, 0.3, 1.0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jump_button"]
+bg_color = Color(0.2, 0.8, 0.3, 0.8)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.5, 1, 0.6, 0.9)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jump_button_pressed"]
+bg_color = Color(0.1, 0.6, 0.2, 0.9)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.3, 0.8, 0.4, 1.0)
+
 [node name="MobileUI" type="CanvasLayer"]
 script = ExtResource("1_mobile")
 
@@ -56,24 +104,33 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -201.0
-offset_top = -120.0
+offset_left = -140.0
+offset_top = -100.0
+offset_right = -20.0
+offset_bottom = -20.0
 grow_horizontal = 0
 grow_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_shoot_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_shoot_button_pressed")
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 text = "SHOOT"
 
 [node name="JumpButton" type="Button" parent="ButtonLayer"]
-anchors_preset = 3
+anchors_preset = 1
 anchor_left = 1.0
-anchor_top = 1.0
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -422.0
-offset_top = -119.0
-offset_right = -279.0
-offset_bottom = 1.0
+offset_left = -140.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 90.0
 grow_horizontal = 0
-grow_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_jump_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_jump_button_pressed")
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 text = "JUMP"
 
 [node name="MovementArea" type="Control" parent="."]
@@ -94,5 +151,5 @@ anchor_right = 1.0
 anchor_bottom = 0.8
 offset_left = 10.0
 offset_top = 10.0
-offset_right = -10.0
+offset_right = -150.0
 offset_bottom = -10.0
