@@ -137,15 +137,23 @@ func handle_movement(delta):
 	move_and_slide()
 
 func shoot():
+	# 射撃位置と方向を計算
+	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
+	var shoot_direction = -camera.global_transform.basis.z
+	
+	# ローカルで弾丸を生成
+	_spawn_bullet(shoot_position, shoot_direction)
+	
+	# 他のプレイヤーにも弾丸を生成させる
+	if multiplayer.has_multiplayer_peer():
+		spawn_bullet_remote.rpc(shoot_position, shoot_direction)
+
+# 弾丸を実際に生成する関数
+func _spawn_bullet(position: Vector3, direction: Vector3):
 	var bullet = bullet_scene.instantiate()
 	get_parent().add_child(bullet)
-	
-	# 弾丸の位置をカメラの前に設定
-	bullet.global_position = camera.global_position + camera.global_transform.basis.z * -0.5
-	
-	# 弾丸の方向と速度を設定
-	var shoot_direction = -camera.global_transform.basis.z
-	bullet.set_velocity(shoot_direction)
+	bullet.global_position = position
+	bullet.set_velocity(direction)
 
 # RPC関数：位置同期を受信
 @rpc("any_peer", "unreliable")
@@ -154,3 +162,9 @@ func update_remote_position(new_position: Vector3, new_rotation: float):
 	if not is_multiplayer_authority():
 		sync_position = new_position
 		sync_rotation_y = new_rotation
+
+# RPC関数：他のプレイヤーの弾丸を生成
+@rpc("any_peer", "reliable")
+func spawn_bullet_remote(position: Vector3, direction: Vector3):
+	# 他のプレイヤーの弾丸を生成
+	_spawn_bullet(position, direction)
