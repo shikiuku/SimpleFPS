@@ -21,11 +21,11 @@ var view_touch_id = -1
 var active_touch_ids = {}  # アクティブなタッチを追跡
 var is_any_button_pressed = false  # いずれかのボタンが押されているか
 
-# ジョイスティック設定
+# ジョイスティック設定（新版）
 var joystick_center = Vector2.ZERO
 var joystick_radius = 50.0
-var joystick_dead_zone = 10.0
-var knob_center_offset = Vector2(15, 15)  # ノブのサイズの半分
+var joystick_dead_zone = 8.0
+var joystick_knob_size = Vector2(30, 30)  # ノブのサイズ
 
 func _ready():
 	print("=== MobileUI INITIALIZATION ===")
@@ -42,14 +42,16 @@ func _ready():
 		jump_button.button_up.connect(_on_jump_button_up)
 		print("Jump button connected")
 	
-	# ジョイスティック初期化
+	# ジョイスティック初期化（新版）
 	if joystick_base and joystick_knob:
-		# ジョイスティックの中心位置を計算
-		joystick_center = joystick_base.position + joystick_base.size / 2
-		print("Joystick center: ", joystick_center)
+		# ジョイスティックの中心位置をグローバル座標で計算
+		joystick_center = joystick_base.global_position + joystick_base.size / 2
+		print("Joystick center (global): ", joystick_center)
+		print("Joystick base pos: ", joystick_base.position, " size: ", joystick_base.size)
+		print("Joystick base global pos: ", joystick_base.global_position)
 		
 		# ノブを中心に配置
-		_reset_knob()
+		_reset_joystick_knob()
 	
 	# タッチ入力接続
 	if movement_area:
@@ -70,7 +72,7 @@ func _cleanup_all_touches():
 	is_any_button_pressed = false
 	shoot_button_pressed = false
 	jump_button_pressed = false
-	_reset_knob()
+	_reset_joystick_knob()
 	move_input.emit(Vector2.ZERO)
 
 # フォーカス失った時のクリーンアップ
@@ -78,26 +80,39 @@ func _notification(what):
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		_cleanup_all_touches()
 
-func _reset_knob():
+# 新しいジョイスティックノブリセット関数
+func _reset_joystick_knob():
 	if joystick_knob and joystick_base:
 		# ノブをベースの中心に配置
 		var base_center = joystick_base.size / 2
-		joystick_knob.position = base_center - knob_center_offset
+		var knob_half_size = joystick_knob_size / 2
+		joystick_knob.position = base_center - knob_half_size
+		print("Joystick knob reset to center: ", joystick_knob.position)
 
-# ジョイスティックエリア内かどうかを判定
-func _is_position_in_joystick_area(global_pos: Vector2) -> bool:
-	if not joystick_base:
+# 改善されたジョイスティックエリア判定
+func _is_position_in_joystick_area(view_area_touch_pos: Vector2) -> bool:
+	if not joystick_base or not view_area:
 		return false
 	
-	# ジョイスティックのグローバル位置を取得
+	# ViewAreaのローカル座標をグローバル座標に変換
+	var view_area_global = view_area.global_position + view_area_touch_pos
+	
+	# ジョイスティックのグローバル位置と範囲を取得
 	var joystick_global_pos = joystick_base.global_position
 	var joystick_size = joystick_base.size
 	var joystick_rect = Rect2(joystick_global_pos, joystick_size)
 	
-	# マージンを追加してより確実に分離
-	joystick_rect = joystick_rect.grow(20)
+	# 確実な分離のためマージンを追加
+	joystick_rect = joystick_rect.grow(30)
 	
-	return joystick_rect.has_point(global_pos)
+	var is_in_area = joystick_rect.has_point(view_area_global)
+	if is_in_area:
+		print("=== JOYSTICK AREA CONFLICT DETECTED ===")
+		print("View touch pos: ", view_area_touch_pos)
+		print("View global: ", view_area_global)
+		print("Joystick rect: ", joystick_rect)
+	
+	return is_in_area
 
 func _on_movement_touch(event: InputEvent):
 	if not joystick_base or not joystick_knob:
@@ -116,7 +131,7 @@ func _on_movement_touch(event: InputEvent):
 			# タッチ終了
 			joystick_touch_id = -1
 			active_touch_ids.erase(event.index)
-			_reset_knob()
+			_reset_joystick_knob()
 			move_input.emit(Vector2.ZERO)
 			print("Joystick touch ended ID: ", event.index)
 	
@@ -125,36 +140,48 @@ func _on_movement_touch(event: InputEvent):
 		if active_touch_ids.get(event.index) == "joystick":
 			_update_joystick(event.position)
 
-func _update_joystick(touch_pos: Vector2):
-	if not joystick_base or not joystick_knob:
+# 完全に新しいジョイスティック更新関数
+func _update_joystick(movement_area_touch_pos: Vector2):
+	if not joystick_base or not joystick_knob or not movement_area:
 		return
 	
-	# MovementAreaでのタッチ位置を、JoystickBaseの中心からの相対位置に変換
-	var base_center = joystick_base.size / 2
-	var touch_relative_to_base = touch_pos - base_center
-	var distance = touch_relative_to_base.length()
+	# MovementAreaのローカル座標からJoystickBaseのローカル座標に変換
+	var movement_area_global = movement_area.global_position + movement_area_touch_pos
+	var joystick_base_global = joystick_base.global_position
+	var touch_relative_to_joystick = movement_area_global - joystick_base_global
 	
-	print("Touch pos: ", touch_pos, " Base center: ", base_center, " Relative: ", touch_relative_to_base, " Distance: ", distance)
+	# JoystickBaseの中心からの距離を計算
+	var base_center_local = joystick_base.size / 2
+	var offset_from_center = touch_relative_to_joystick - base_center_local
+	var distance = offset_from_center.length()
+	
+	print("=== NEW JOYSTICK UPDATE ===")
+	print("Movement touch pos: ", movement_area_touch_pos)
+	print("Movement global: ", movement_area_global)
+	print("Joystick base global: ", joystick_base_global)
+	print("Offset from center: ", offset_from_center, " Distance: ", distance)
 	
 	# 半径内に制限
+	var clamped_offset = offset_from_center
 	if distance > joystick_radius:
-		touch_relative_to_base = touch_relative_to_base.normalized() * joystick_radius
+		clamped_offset = offset_from_center.normalized() * joystick_radius
 		distance = joystick_radius
 	
-	# ノブの位置を更新（ベース内での相対位置、ノブのサイズを考慮）
-	var new_knob_pos = base_center + touch_relative_to_base - knob_center_offset
+	# ノブの位置を更新
+	var knob_half_size = joystick_knob_size / 2
+	var new_knob_pos = base_center_local + clamped_offset - knob_half_size
 	joystick_knob.position = new_knob_pos
 	
 	# 入力値を計算（デッドゾーン適用）
 	if distance > joystick_dead_zone:
 		var strength = (distance - joystick_dead_zone) / (joystick_radius - joystick_dead_zone)
-		var direction = touch_relative_to_base.normalized() * strength
+		var direction = clamped_offset.normalized() * strength
 		move_input.emit(direction)
 		print("=== MOVE INPUT EMITTED ===")
-		print("Joystick move: ", direction)
-		print("Touch pos: ", touch_pos, " Distance: ", distance)
+		print("Direction: ", direction, " Strength: ", strength)
 	else:
 		move_input.emit(Vector2.ZERO)
+		print("=== MOVE INPUT ZERO (dead zone) ===")
 
 func _on_view_touch(event: InputEvent):
 	if event is InputEventScreenTouch:
