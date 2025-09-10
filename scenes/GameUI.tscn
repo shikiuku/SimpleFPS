@@ -1,0 +1,33 @@
+[gd_scene load_steps=3 format=3 uid="uid://bxg7s6yv3makn"]
+
+[ext_resource type="Script" path="res://scripts/GameUI.gd" id="1_gameui"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_1"]
+font_color = Color(1, 1, 1, 0.8)
+font_size = 14
+
+[node name="GameUI" type="CanvasLayer"]
+script = ExtResource("1_gameui")
+
+[node name="VersionLabel" type="Label" parent="."]
+anchors_preset = 2
+anchor_top = 0.0
+anchor_bottom = 0.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 150.0
+offset_bottom = 40.0
+text = "Version: 1.0.0"
+label_settings = SubResource("LabelSettings_1")
+
+[node name="PlayerCountLabel" type="Label" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 40.0
+text = "Players: 1/4"
+label_settings = SubResource("LabelSettings_1")
+horizontal_alignment = 2

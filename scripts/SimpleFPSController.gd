@@ -42,6 +42,7 @@ func setup_multiplayer():
 	if is_multiplayer_authority():
 		# 自分のプレイヤー（ローカル）
 		setup_mobile_ui()
+		setup_game_ui()
 		
 		# PCの場合のみマウスをキャプチャ
 		if not _is_mobile():
@@ -76,6 +77,14 @@ func setup_mobile_ui():
 	mobile_ui.look_input.connect(_on_mobile_look_input)
 	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
 	mobile_ui.jump_pressed.connect(_on_mobile_jump)
+
+func setup_game_ui():
+	# GameUIを読み込み（全プレイヤーで共有、1回だけ作成）
+	if get_tree().current_scene.get_node_or_null("GameUI") == null:
+		var game_ui_scene = preload("res://scenes/GameUI.tscn")
+		var game_ui = game_ui_scene.instantiate()
+		get_tree().current_scene.add_child(game_ui)
+		print("GameUI added to scene")
 
 func _on_mobile_move_input(direction: Vector2):
 	mobile_movement = direction

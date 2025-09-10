@@ -29,7 +29,7 @@ friction = 0.3
 bounce = 0.8
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_obstacle"]
-size = Vector3(2, 2, 2)
+size = Vector3(5.83069, 2, 6.1792)
 
 [sub_resource type="BoxMesh" id="BoxMesh_obstacle"]
 size = Vector3(2, 2, 2)
@@ -120,6 +120,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 5)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacle1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.1105, -1.02531, -0.543701)
 shape = SubResource("BoxShape3D_obstacle")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacle1"]
@@ -165,6 +166,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 12)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Pillar1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.05256, 0, -18.2354)
 shape = SubResource("CylinderShape3D_pillar")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Pillar1"]
