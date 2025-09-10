@@ -19,7 +19,7 @@ func _ready():
 	_start_auto_connect()
 
 func _start_auto_connect():
-	# サーバーアドレスを環境変数から取得（優先順位：環境変数 > デバッグビルド > デフォルト）
+	# サーバーアドレスを環境変数から取得（優先順位：環境変数 > デバッグビルド > 手動入力）
 	var server_address = OS.get_environment("GAME_SERVER_URL")
 	
 	if server_address == "":
@@ -27,8 +27,10 @@ func _start_auto_connect():
 		if OS.is_debug_build():
 			server_address = "127.0.0.1"  # ローカルテスト用
 		else:
-			# プロダクション用デフォルト（Railwayデプロイ済み）
-			server_address = "natural-benevolence-production.up.railway.app"
+			# 手動でサーバーアドレスを指定
+			print("環境変数GAME_SERVER_URLが設定されていません")
+			print("現在のRailway URLを手動で確認してください")
+			server_address = "incredible-illumination-production.up.railway.app"  # 最新URL
 	
 	status_label.text = "Railwayサーバーに接続中..."
 	
