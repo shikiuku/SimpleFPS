@@ -34,7 +34,7 @@ func start_host():
 	else:
 		# デスクトップ版: WebSocketMultiplayerPeer を使用
 		multiplayer_peer = WebSocketMultiplayerPeer.new()
-		error = multiplayer_peer.create_server(PORT, "*", [], true)
+		error = multiplayer_peer.create_server(PORT, "*")
 		print("WebSocketサーバーをポート ", PORT, " で開始中...")
 	
 	if error != OK:

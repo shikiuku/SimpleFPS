@@ -27,7 +27,7 @@ func _ready():
 func start_server():
 	# WebSocketMultiplayerPeer でサーバー作成（Railway対応）
 	var multiplayer_peer = WebSocketMultiplayerPeer.new()
-	var error = multiplayer_peer.create_server(PORT, "*", [], true)  # TLSなし、全IPから接続許可
+	var error = multiplayer_peer.create_server(PORT, "*")  # ポートとバインドアドレスのみ
 	
 	if error != OK:
 		print("ERROR: Failed to create server. Error code: ", error)
