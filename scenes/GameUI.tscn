@@ -1,18 +1,15 @@
-[gd_scene load_steps=3 format=3 uid="uid://bxg7s6yv3makn"]
+[gd_scene load_steps=3 format=3 uid="uid://c8e2377ae56r5"]
 
-[ext_resource type="Script" path="res://scripts/GameUI.gd" id="1_gameui"]
+[ext_resource type="Script" uid="uid://c8gq6mxd1jt8k" path="res://scripts/GameUI.gd" id="1_gameui"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_1"]
-font_color = Color(1, 1, 1, 0.8)
 font_size = 14
+font_color = Color(1, 1, 1, 0.8)
 
 [node name="GameUI" type="CanvasLayer"]
 script = ExtResource("1_gameui")
 
 [node name="VersionLabel" type="Label" parent="."]
-anchors_preset = 2
-anchor_top = 0.0
-anchor_bottom = 0.0
 offset_left = 10.0
 offset_top = 10.0
 offset_right = 150.0

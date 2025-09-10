@@ -1,51 +1,90 @@
-[gd_scene load_steps=2 format=3 uid="uid://bxn4k8yv7p8mn"]
+[gd_scene load_steps=4 format=3 uid="uid://bxn4k8yv7p8mn"]
 
-[ext_resource type="Script" path="res://scripts/MobileUI.gd" id="1_mobile"]
+[ext_resource type="Script" uid="uid://dh1yibwnvob16" path="res://scripts/MobileUI.gd" id="1_mobile"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_base"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 50
+corner_radius_top_right = 50
+corner_radius_bottom_right = 50
+corner_radius_bottom_left = 50
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_knob"]
+bg_color = Color(1, 1, 1, 0.6)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
 
 [node name="MobileUI" type="CanvasLayer"]
 script = ExtResource("1_mobile")
 
-[node name="MovementArea" type="Control" parent="."]
-anchors_preset = 0
-anchor_right = 0.4
-anchor_bottom = 1.0
-
-[node name="ViewArea" type="Control" parent="."]
-anchors_preset = 0
-anchor_left = 0.4
-anchor_right = 0.6
-anchor_bottom = 0.8
-
 [node name="JoystickVisual" type="Control" parent="."]
-anchors_preset = 0
+layout_mode = 3
 anchor_right = 0.4
 anchor_bottom = 1.0
-mouse_filter = 2
 
-[node name="ShootButton" type="Button" parent="."]
+[node name="JoystickBase" type="Panel" parent="JoystickVisual"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 50.0
+offset_top = -150.0
+offset_right = 150.0
+offset_bottom = -50.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_base")
+
+[node name="JoystickKnob" type="Panel" parent="JoystickVisual"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 85.0
+offset_top = -115.0
+offset_right = 115.0
+offset_bottom = -85.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_knob")
+
+[node name="ButtonLayer" type="CanvasLayer" parent="."]
+
+[node name="ShootButton" type="Button" parent="ButtonLayer"]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -100.0
-offset_right = -20.0
-offset_bottom = -20.0
+offset_left = -201.0
+offset_top = -120.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "SHOOT"
 
-[node name="JumpButton" type="Button" parent="."]
+[node name="JumpButton" type="Button" parent="ButtonLayer"]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -100.0
-offset_right = -120.0
-offset_bottom = -20.0
+offset_left = -422.0
+offset_top = -119.0
+offset_right = -279.0
+offset_bottom = 1.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "JUMP"
+
+[node name="MovementArea" type="Control" parent="."]
+layout_mode = 3
+anchor_right = 0.4
+anchor_bottom = 1.0
+
+[node name="ViewArea" type="Control" parent="."]
+layout_mode = 3
+anchor_left = 0.4
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.199982
+offset_bottom = -119.0

@@ -15,16 +15,14 @@ config/tags=PackedStringArray("3d", "multiplayer", "fps")
 run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 
-[display]
-
-window/size/viewport_width=1152
-window/size/viewport_height=648
-window/stretch/mode="canvas_items"
-window/handheld/orientation=1
-
 [autoload]
 
 NetworkManager="*res://scripts/NetworkManager.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
 
 [input]
 

@@ -132,9 +132,15 @@ func _input(event):
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	# キーボード・マウス射撃
-	if event.is_action_pressed("shoot"):
-		shoot()
+	# キーボード・マウス射撃（画面タップでの発射を防ぐため、マウスボタンのみに制限）
+	# タッチイベントを完全に除外
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		return
+	
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		# PC環境でのみ動作するように、タッチデバイスを除外
+		if not DisplayServer.is_touchscreen_available():
+			shoot()
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
@@ -146,8 +152,21 @@ func _physics_process(delta):
 		sync_rotation_y = rotation.y
 		
 		# RPC経由で位置を送信（確実に全員に届ける）
-		if multiplayer.has_multiplayer_peer() and multiplayer.get_peers().size() > 0:
-			update_remote_position.rpc(sync_position, sync_rotation_y)
+		var current_peers = multiplayer.get_peers()
+		if multiplayer.has_multiplayer_peer() and current_peers.size() > 0:
+			# サーバー（ID=1）が存在し、シーンに追加されているかチェック
+			var server_id = 1
+			var server_node = get_parent().get_node_or_null(str(server_id))
+			
+			# サーバーノードが存在し、シーンツリーにある場合のみRPCを送信
+			if server_node != null and server_node.is_inside_tree():
+				update_remote_position.rpc(sync_position, sync_rotation_y)
+			else:
+				# サーバーが見つからない場合の詳細なデバッグ情報
+				if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+					print("WARN: Server node not found - ID:", server_id, " Parent:", get_parent().name)
+					print("Available peers:", current_peers)
+					print("Parent children:", get_parent().get_children().map(func(child): return child.name))
 		
 		# デバッグ: 同期データを送信していることを確認（頻度を下げる）
 		if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
@@ -218,8 +237,17 @@ func shoot():
 	_spawn_bullet(shoot_position, shoot_direction)
 	
 	# 他のプレイヤーにも弾丸を生成させる
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_peers().size() > 0:
-		spawn_bullet_remote.rpc(shoot_position, shoot_direction)
+	var current_peers = multiplayer.get_peers()
+	if multiplayer.has_multiplayer_peer() and current_peers.size() > 0:
+		# サーバー（ID=1）が存在し、シーンに追加されているかチェック
+		var server_id = 1
+		var server_node = get_parent().get_node_or_null(str(server_id))
+		
+		# サーバーノードが存在し、シーンツリーにある場合のみRPCを送信
+		if server_node != null and server_node.is_inside_tree():
+			spawn_bullet_remote.rpc(shoot_position, shoot_direction)
+		else:
+			print("WARN: Cannot send bullet RPC - Server node not found (ID: ", server_id, ")")
 
 # 弾丸を実際に生成する関数
 func _spawn_bullet(position: Vector3, direction: Vector3):
@@ -233,11 +261,19 @@ func _spawn_bullet(position: Vector3, direction: Vector3):
 func update_remote_position(new_position: Vector3, new_rotation: float):
 	# 権限チェック：自分の位置は更新しない
 	if not is_multiplayer_authority():
-		sync_position = new_position
-		sync_rotation_y = new_rotation
+		# ノードがシーンツリーに正しく存在することを確認
+		if is_inside_tree():
+			sync_position = new_position
+			sync_rotation_y = new_rotation
+		else:
+			print("ERROR: Received RPC for node not in tree: ", name)
 
 # RPC関数：他のプレイヤーの弾丸を生成
 @rpc("any_peer", "reliable")
 func spawn_bullet_remote(position: Vector3, direction: Vector3):
-	# 他のプレイヤーの弾丸を生成
-	_spawn_bullet(position, direction)
+	# ノードがシーンツリーに正しく存在することを確認
+	if is_inside_tree():
+		# 他のプレイヤーの弾丸を生成
+		_spawn_bullet(position, direction)
+	else:
+		print("ERROR: Received bullet RPC for node not in tree: ", name)
