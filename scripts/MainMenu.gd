@@ -28,7 +28,7 @@ func _start_auto_connect():
 			server_address = "127.0.0.1"  # ローカルテスト用
 		else:
 			# プロダクション用デフォルト（Railwayデプロイ済み）
-			server_address = "insightful-motivation-production-f4cc.up.railway.app"
+			server_address = "simplefps-production.up.railway.app"
 	
 	status_label.text = "Railwayサーバーに接続中..."
 	
