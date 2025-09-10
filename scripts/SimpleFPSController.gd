@@ -188,9 +188,12 @@ func handle_movement(delta):
 	move_and_slide()
 
 func shoot():
-	# 射撃位置と方向を計算（型を明示的に指定）
-	var shoot_position: Vector3 = camera.global_position + camera.global_transform.basis.z * -0.5
-	var shoot_direction: Vector3 = -camera.global_transform.basis.z
+	# 射撃位置と方向を計算（Vector3として明示的に作成）
+	var cam_pos = camera.global_position
+	var cam_forward = -camera.global_transform.basis.z
+	
+	var shoot_position = Vector3(cam_pos.x, cam_pos.y, cam_pos.z) + Vector3(cam_forward.x * -0.5, cam_forward.y * -0.5, cam_forward.z * -0.5)
+	var shoot_direction = Vector3(cam_forward.x, cam_forward.y, cam_forward.z)
 	
 	# デバッグ: 型を確認
 	print("DEBUG shoot - Position type: ", typeof(shoot_position), " Value: ", shoot_position)
@@ -209,6 +212,14 @@ func _spawn_bullet(position: Vector3, direction: Vector3):
 	get_parent().add_child(bullet)
 	bullet.global_position = position
 	bullet.set_velocity(direction)
+	print("DEBUG: Bullet spawned at ", bullet.global_position, " with direction ", direction)
+	
+	# Web版対応: 弾丸が確実に見えるように設定
+	if OS.has_feature("web"):
+		# Web版では重力を少し調整
+		bullet.gravity_scale = 0.5
+		# 弾丸の寿命を少し短く
+		bullet.lifetime = 5.0
 
 # RPC関数：位置同期を受信
 @rpc("any_peer", "unreliable")

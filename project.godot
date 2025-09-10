@@ -14,7 +14,6 @@ config/name="Simple FPS"
 config/tags=PackedStringArray("3d", "multiplayer", "fps")
 run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
-config/icon="res://icon.svg"
 
 [display]
 
