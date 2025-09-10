@@ -2,7 +2,7 @@ extends Node
 
 # シングルトンとして使用
 
-const PORT = 7000
+const PORT = 8080  # Railwayのデフォルトポート
 const MAX_PLAYERS = 8
 
 # プラットフォーム判定
@@ -32,10 +32,10 @@ func start_host():
 		print("Web版ではサーバーホストはサポートされていません")
 		return
 	else:
-		# デスクトップ版: ENetMultiplayerPeer を使用
-		multiplayer_peer = ENetMultiplayerPeer.new()
-		error = multiplayer_peer.create_server(PORT, MAX_PLAYERS)
-		print("ENetサーバーをポート ", PORT, " で開始中...")
+		# デスクトップ版: WebSocketMultiplayerPeer を使用
+		multiplayer_peer = WebSocketMultiplayerPeer.new()
+		error = multiplayer_peer.create_server(PORT, "*", [], true)
+		print("WebSocketサーバーをポート ", PORT, " で開始中...")
 	
 	if error != OK:
 		print("サーバー作成に失敗しました。エラーコード: ", error)
@@ -58,20 +58,18 @@ func start_client(address = "127.0.0.1"):
 		multiplayer.multiplayer_peer = null
 		await get_tree().process_frame
 	
-	var multiplayer_peer
-	var error
+	# すべてのプラットフォームでWebSocketを使用
+	var multiplayer_peer = WebSocketMultiplayerPeer.new()
+	var url
 	
-	if is_web_platform:
-		# Web版: WebSocketMultiplayerPeer を使用
-		multiplayer_peer = WebSocketMultiplayerPeer.new()
-		var url = "ws://" + address + ":" + str(PORT)
-		error = multiplayer_peer.create_client(url)
-		print("WebSocketサーバーに接続中: ", url)
+	# Railway環境の場合はwss://を使用（ポート番号は不要）
+	if address.ends_with(".railway.app") or address.ends_with(".up.railway.app"):
+		url = "wss://" + address  # Railwayは自動的に正しいポートに転送
 	else:
-		# デスクトップ版: ENetMultiplayerPeer を使用
-		multiplayer_peer = ENetMultiplayerPeer.new()
-		error = multiplayer_peer.create_client(address, PORT)
-		print("ENetサーバーに接続中: ", address, ":", PORT)
+		url = "ws://" + address + ":" + str(PORT)
+	
+	var error = multiplayer_peer.create_client(url)
+	print("WebSocketサーバーに接続中: ", url)
 	
 	if error != OK:
 		print("クライアント作成に失敗しました。エラーコード: ", error)

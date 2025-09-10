@@ -1,7 +1,7 @@
 extends Node
 
 # Railway用サーバーメインシーン
-var PORT = 7000  # デフォルトポート
+var PORT = 8080  # デフォルトポート（Railway標準）
 const MAX_PLAYERS = 8
 
 func _ready():
@@ -14,6 +14,7 @@ func _ready():
 		print("Using default PORT: ", PORT)
 	
 	print("=== Godot Multiplayer Server Starting ===")
+	print("Protocol: WebSocket")
 	print("Port: ", PORT)
 	print("Max Players: ", MAX_PLAYERS)
 	
@@ -24,9 +25,9 @@ func _ready():
 	start_server()
 
 func start_server():
-	# ENetMultiplayerPeer でサーバー作成
-	var multiplayer_peer = ENetMultiplayerPeer.new()
-	var error = multiplayer_peer.create_server(PORT, MAX_PLAYERS)
+	# WebSocketMultiplayerPeer でサーバー作成（Railway対応）
+	var multiplayer_peer = WebSocketMultiplayerPeer.new()
+	var error = multiplayer_peer.create_server(PORT, "*", [], true)  # TLSなし、全IPから接続許可
 	
 	if error != OK:
 		print("ERROR: Failed to create server. Error code: ", error)
