@@ -19,87 +19,35 @@ var last_view_pos = Vector2.ZERO
 var joystick_radius = 60.0
 var joystick_dead_zone = 10.0
 
-func _is_mobile() -> bool:
-	# モバイル環境の判定（Web版でもタッチ対応デバイスなら表示）
-	var is_mobile_os = OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile")
-	var has_touchscreen = DisplayServer.is_touchscreen_available()
-	var os_name = OS.get_name()
+func _ready():
+	print("=== MobileUI INITIALIZATION ===")
+	print("Always showing UI (no platform detection)")
 	
-	print("Mobile detection - OS: ", os_name, " Mobile OS: ", is_mobile_os, " Touchscreen: ", has_touchscreen)
+	# ボタン接続（シンプルで確実な方法）
+	shoot_button.pressed.connect(_on_shoot_pressed)
+	jump_button.pressed.connect(_on_jump_pressed)
 	
-	# Web版でタッチスクリーンが利用可能な場合もモバイルとして扱う
-	return is_mobile_os or has_touchscreen or os_name == "Web"
+	# タッチエリア接続
+	movement_area.gui_input.connect(_on_movement_input)
+	view_area.gui_input.connect(_on_view_input)
+	
+	print("MobileUI setup complete!")
+	print("Shoot button: ", shoot_button)
+	print("Jump button: ", jump_button)
+	print("Movement area: ", movement_area)
+	print("View area: ", view_area)
 
-func setup_touch_buttons():
-	# 移動ジョイスティックエリア
-	movement_area.gui_input.connect(_on_movement_area_input)
-	
-	# 視点操作エリア
-	view_area.gui_input.connect(_on_view_area_input)
-	
-	# ボタンのタッチイベント処理も追加
-	if shoot_button:
-		shoot_button.gui_input.connect(_on_shoot_button_touch)
-	if jump_button:
-		jump_button.gui_input.connect(_on_jump_button_touch)
-	
-	# ボタンシグナルを遅延接続（より確実）
-	call_deferred("_connect_buttons")
-	
-	# ボタンの見た目を設定
-	_setup_button_visuals()
+# _is_mobile()関数は削除済み - 常にモバイルUIを表示
 
-func _connect_buttons():
-	# ボタンが完全に準備されてから接続（複数のシグナルを使用）
-	if shoot_button:
-		if not shoot_button.pressed.is_connected(_on_shoot_button_pressed):
-			shoot_button.pressed.connect(_on_shoot_button_pressed)
-		if not shoot_button.button_down.is_connected(_on_shoot_button_down):
-			shoot_button.button_down.connect(_on_shoot_button_down)
-		print("Shoot button connected!")
-	
-	if jump_button:
-		if not jump_button.pressed.is_connected(_on_jump_button_pressed):
-			jump_button.pressed.connect(_on_jump_button_pressed)
-		if not jump_button.button_down.is_connected(_on_jump_button_down):
-			jump_button.button_down.connect(_on_jump_button_down)
-		print("Jump button connected!")
-	
-	print("Touch buttons final status:")
-	print("  Shoot pressed: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
-	print("  Jump pressed: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
-
-func _on_shoot_button_pressed():
-	print("Shoot button pressed!")
+func _on_shoot_pressed():
+	print("SHOOT BUTTON PRESSED!")
 	shoot_pressed.emit()
 
-func _on_jump_button_pressed():
-	print("Jump button pressed!")
+func _on_jump_pressed():
+	print("JUMP BUTTON PRESSED!")
 	jump_pressed.emit()
 
-func _on_shoot_button_down():
-	print("Shoot button down!")
-	shoot_pressed.emit()
-
-func _on_jump_button_down():
-	print("Jump button down!")
-	jump_pressed.emit()
-
-func _on_shoot_button_touch(event: InputEvent):
-	if event is InputEventScreenTouch and event.pressed:
-		print("Shoot button touched!")
-		shoot_pressed.emit()
-
-func _on_jump_button_touch(event: InputEvent):
-	if event is InputEventScreenTouch and event.pressed:
-		print("Jump button touched!")
-		jump_pressed.emit()
-
-func _setup_button_visuals():
-	# デフォルトボタン色を使用（カスタム色を削除）
-	print("Button visuals setup complete - using default theme colors")
-
-func _on_movement_area_input(event: InputEvent):
+func _on_movement_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed and movement_touch_index == -1:
 			# タッチ開始
@@ -120,9 +68,11 @@ func _on_movement_area_input(event: InputEvent):
 		if distance > joystick_dead_zone:
 			var direction = delta.normalized()
 			var strength = min(distance / joystick_radius, 1.0)
-			move_input.emit(direction * strength)
+			var final_input = direction * strength
+			move_input.emit(final_input)
+			print("Movement input: ", final_input)
 
-func _on_view_area_input(event: InputEvent):
+func _on_view_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed and view_touch_index == -1:
 			# 視点操作開始
@@ -138,20 +88,6 @@ func _on_view_area_input(event: InputEvent):
 		# ドラッグ中
 		var delta = event.position - last_view_pos
 		last_view_pos = event.position
-		look_input.emit(delta * 0.002)  # マウス感度と同様
-
-func _ready():
-	# モバイルかどうか判定
-	if not _is_mobile():
-		visible = false
-		return
-	
-	# TouchScreenButtonの設定
-	setup_touch_buttons()
-	
-	# ジョイスティック表示用の描画設定
-	joystick_visual.custom_minimum_size = Vector2(160, 160)
-	
-	print("Mobile UI initialized")
-	print("Shoot button node: ", shoot_button)
-	print("Jump button node: ", jump_button)
+		var final_input = delta * 0.002  # マウス感度と同様
+		look_input.emit(final_input)
+		print("Look input: ", final_input)

@@ -44,9 +44,8 @@ func setup_multiplayer():
 		setup_mobile_ui()
 		setup_game_ui()
 		
-		# PCの場合のみマウスをキャプチャ
-		if not _is_mobile():
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		# マウス入力がある場合はマウスをキャプチャ
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		
 		camera.current = true
 		mesh_instance.visible = false
@@ -60,28 +59,10 @@ func setup_multiplayer():
 		mesh_instance.set_surface_override_material(0, new_material)
 		print("Remote player initialized: ", name, " (RED - VISIBLE)")
 
-func _is_mobile() -> bool:
-	var is_mobile_os = OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile")
-	var has_touchscreen = DisplayServer.is_touchscreen_available()
-	var os_name = OS.get_name()
-	
-	# Web版でも表示するように強制
-	var result = is_mobile_os or has_touchscreen or os_name == "Web"
-	
-	# デバッグメッセージを1回だけ出力（静的変数で管理）
-	@warning_ignore("static_called_on_instance")
-	if not _mobile_detection_printed:
-		print("SimpleFPSController mobile detection - OS: ", os_name, " Result: ", result)
-		_mobile_detection_printed = true
-	
-	return result
-
-# 静的変数でデバッグメッセージの出力を制御
-static var _mobile_detection_printed = false
+# _is_mobile()関数は削除済み - 常にモバイルUIを表示
 
 func setup_mobile_ui():
-	if not _is_mobile():
-		return
+	print("Setting up mobile UI (always enabled)...")
 	
 	# モバイルUI を読み込み
 	var mobile_ui_scene = preload("res://scenes/MobileUI.tscn")
@@ -94,8 +75,12 @@ func setup_mobile_ui():
 	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
 	mobile_ui.jump_pressed.connect(_on_mobile_jump)
 	
-	print("Mobile UI setup complete - all signals connected!")
-	print("Mobile UI node: ", mobile_ui)
+	print("Mobile UI setup complete!")
+	print("Mobile UI signals connected:")
+	print("  - move_input: ", mobile_ui.move_input.is_connected(_on_mobile_move_input))
+	print("  - look_input: ", mobile_ui.look_input.is_connected(_on_mobile_look_input))
+	print("  - shoot_pressed: ", mobile_ui.shoot_pressed.is_connected(_on_mobile_shoot))
+	print("  - jump_pressed: ", mobile_ui.jump_pressed.is_connected(_on_mobile_jump))
 
 func setup_game_ui():
 	# GameUIを読み込み（全プレイヤーで共有、1回だけ作成）
@@ -134,23 +119,22 @@ func _input(event):
 	if not is_multiplayer_authority():
 		return
 	
-	# PCでのマウス操作（モバイルでは無視）
-	if not _is_mobile():
-		if event is InputEventMouseMotion:
-			# マウスでカメラ回転
-			rotate_y(-event.relative.x * mouse_sensitivity)
-			camera.rotate_x(-event.relative.y * mouse_sensitivity)
-			camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
-		
-		if event.is_action_pressed("mouseMode"):
-			if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-			else:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-		
-		# PC射撃
-		if event.is_action_pressed("shoot"):
-			shoot()
+	# マウス操作（PCとタッチ両対応）
+	if event is InputEventMouseMotion:
+		# マウスでカメラ回転
+		rotate_y(-event.relative.x * mouse_sensitivity)
+		camera.rotate_x(-event.relative.y * mouse_sensitivity)
+		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
+	
+	if event.is_action_pressed("mouseMode"):
+		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		else:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	
+	# キーボード・マウス射撃
+	if event.is_action_pressed("shoot"):
+		shoot()
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
@@ -201,8 +185,8 @@ func handle_movement(delta):
 	if Input.is_action_pressed("move_right"):
 		input_dir.x += 1
 	
-	# モバイル入力を追加
-	if _is_mobile() and mobile_movement != Vector2.ZERO:
+	# モバイル入力を追加（常に有効）
+	if mobile_movement != Vector2.ZERO:
 		input_dir = mobile_movement
 	
 	# 移動速度を決定
