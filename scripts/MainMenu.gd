@@ -3,6 +3,13 @@ extends Control
 @onready var status_label = $VBoxContainer/StatusLabel
 
 func _ready():
+	# サーバーモードかどうかを確認
+	var server_mode = OS.get_environment("SERVER_MODE")
+	if server_mode == "true":
+		print("MainMenu: サーバーモード検出、ServerMainシーンに切り替え")
+		get_tree().change_scene_to_file("res://scenes/ServerMain.tscn")
+		return
+	
 	# 自動接続開始
 	status_label.text = "サーバーに自動接続中..."
 	print("MainMenu: 自動接続を開始します")

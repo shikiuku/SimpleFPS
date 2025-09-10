@@ -25,5 +25,8 @@ RUN mv "Simple FPS.x86_64" simple-fps-server && \
 # ポートを公開
 EXPOSE $PORT
 
-# エクスポート済みサーバーを起動（ServerMainシーンを直接実行）
-CMD ["./simple-fps-server", "--headless", "--main-pack", "simple-fps-server.pck", "res://scenes/ServerMain.tscn"]
+# サーバーモード環境変数を設定
+ENV SERVER_MODE=true
+
+# エクスポート済みサーバーを起動
+CMD ["./simple-fps-server", "--headless"]
