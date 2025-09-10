@@ -67,8 +67,17 @@ func _is_mobile() -> bool:
 	
 	# Web版でも表示するように強制
 	var result = is_mobile_os or has_touchscreen or os_name == "Web"
-	print("SimpleFPSController mobile detection - OS: ", os_name, " Result: ", result)
+	
+	# デバッグメッセージを1回だけ出力（静的変数で管理）
+	@warning_ignore("static_called_on_instance")
+	if not _mobile_detection_printed:
+		print("SimpleFPSController mobile detection - OS: ", os_name, " Result: ", result)
+		_mobile_detection_printed = true
+	
 	return result
+
+# 静的変数でデバッグメッセージの出力を制御
+static var _mobile_detection_printed = false
 
 func setup_mobile_ui():
 	if not _is_mobile():
@@ -98,21 +107,25 @@ func setup_game_ui():
 
 func _on_mobile_move_input(direction: Vector2):
 	mobile_movement = direction
+	print("Mobile move input: ", direction)
 
 func _on_mobile_look_input(delta: Vector2):
-	# マウス操作と同じロジック
-	rotate_y(-delta.x)
-	camera.rotate_x(-delta.y)
-	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
+	if is_multiplayer_authority():
+		# マウス操作と同じロジック
+		rotate_y(-delta.x)
+		camera.rotate_x(-delta.y)
+		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
 
 func _on_mobile_shoot():
-	print("Mobile shoot signal received!")
-	shoot()
+	if is_multiplayer_authority():
+		print("Mobile shoot triggered!")
+		shoot()
 
 func _on_mobile_jump():
-	print("Mobile jump signal received!")
-	if is_on_floor():
-		velocity.y = jump_velocity
+	if is_multiplayer_authority():
+		print("Mobile jump triggered!")
+		if is_on_floor():
+			velocity.y = jump_velocity
 
 func _input(event):
 	# 自分のプレイヤーのみが入力を処理
@@ -150,16 +163,16 @@ func _physics_process(delta):
 		if multiplayer.has_multiplayer_peer():
 			update_remote_position.rpc(sync_position, sync_rotation_y)
 		
-		# デバッグ: 同期データを送信していることを確認
-		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+		# デバッグ: 同期データを送信していることを確認（頻度を下げる）
+		if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
 			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y, " Authority: ", get_multiplayer_authority(), " IsMoving: ", velocity.length() > 0.1)
 	else:
 		# リモートプレイヤーは同期された値を適用
 		global_position = global_position.lerp(sync_position, 0.1)
 		rotation.y = lerp_angle(rotation.y, sync_rotation_y, 0.1)
 		
-		# デバッグ: 同期データを受信していることを確認（すべてのリモートプレイヤー）
-		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+		# デバッグ: 同期データを受信していることを確認（頻度を下げる）
+		if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
 			print("受信中 - Player: ", name, " 受信Pos: ", sync_position, " 現在Pos: ", global_position)
 
 func handle_movement(delta):
@@ -240,25 +253,3 @@ func update_remote_position(new_position: Vector3, new_rotation: float):
 func spawn_bullet_remote(position: Vector3, direction: Vector3):
 	# 他のプレイヤーの弾丸を生成
 	_spawn_bullet(position, direction)
-
-# モバイル入力ハンドラー
-func _on_mobile_move_input(direction: Vector2):
-	mobile_movement = direction
-	print("Mobile move input: ", direction)
-
-func _on_mobile_look_input(delta: Vector2):
-	if is_multiplayer_authority():
-		camera_holder.rotate_y(delta.x)
-		camera.rotate_x(delta.y)
-		camera.rotation.x = clamp(camera.rotation.x, -PI/2, PI/2)
-
-func _on_mobile_shoot():
-	if is_multiplayer_authority():
-		print("Mobile shoot triggered!")
-		shoot()
-
-func _on_mobile_jump():
-	if is_multiplayer_authority():
-		print("Mobile jump triggered!")
-		if is_on_floor():
-			velocity.y = jump_velocity

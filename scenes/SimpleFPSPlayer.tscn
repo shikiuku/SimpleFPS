@@ -15,12 +15,6 @@ albedo_color = Color(0.2, 0.6, 1, 1)
 
 [node name="FPSPlayer" type="CharacterBody3D"]
 script = ExtResource("1_abc123")
-walk_speed = null
-run_speed = null
-jump_velocity = null
-mouse_sensitivity = null
-sync_position = null
-sync_rotation_y = null
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_1")

@@ -25,14 +25,8 @@ func _on_player_connected(peer_id: int):
 	print("Is server: ", multiplayer.is_server())
 	print("My ID: ", multiplayer.get_unique_id())
 	
-	# サーバー・クライアント両方で相手をスポーン
+	# 新しく接続したプレイヤーのみをスポーン
 	spawn_player(peer_id)
-	
-	# もし自分がまだスポーンされていなければ自分もスポーン
-	var my_id = multiplayer.get_unique_id()
-	if not has_node(str(my_id)):
-		print("Spawning myself as well: ", my_id)
-		spawn_player(my_id)
 	
 	var player_count = 0
 	for child in get_children():
@@ -83,13 +77,10 @@ func start_multiplayer_session():
 	# 自分のプレイヤーのみを生成
 	var my_id = multiplayer.get_unique_id()
 	print("TestLevel: spawn my player ID: ", my_id)
-	spawn_player(my_id)
+	print("TestLevel: existing peers: ", multiplayer.get_peers())
 	
-	# 既に接続済みの他のプレイヤーをスポーン（サーバー・クライアント共通）
-	for peer_id in multiplayer.get_peers():
-		if peer_id != my_id:  # 自分以外
-			print("TestLevel: spawn existing peer player ID: ", peer_id)
-			spawn_player(peer_id)
+	# サーバーかクライアントかに関係なく、自分だけをスポーン
+	spawn_player(my_id)
 	
 	# 注意: 他のプレイヤーは_on_player_connected()で自動的にスポーンされる
 	

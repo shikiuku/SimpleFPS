@@ -4,7 +4,7 @@ extends CanvasLayer
 @onready var player_count_label = $PlayerCountLabel
 
 # ゲームのバージョン
-const VERSION = "v1.5.0"
+const VERSION = "v1.5.1"
 
 func _ready():
 	# バージョンを表示
@@ -32,7 +32,7 @@ func update_player_count():
 	if multiplayer.has_multiplayer_peer():
 		peer_count = multiplayer.get_peers().size() + 1  # +1 for self
 	
-	player_count_label.text = "Players: " + str(peer_count) + "/4"
+	player_count_label.text = "Players: " + str(peer_count) + "/8"
 	
 	# デバッグ情報
 	if multiplayer.has_multiplayer_peer():
