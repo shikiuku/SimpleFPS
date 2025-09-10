@@ -87,9 +87,11 @@ func _on_mobile_look_input(delta: Vector2):
 	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
 
 func _on_mobile_shoot():
+	print("Mobile shoot signal received!")
 	shoot()
 
 func _on_mobile_jump():
+	print("Mobile jump signal received!")
 	if is_on_floor():
 		velocity.y = jump_velocity
 

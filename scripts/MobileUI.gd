@@ -36,11 +36,16 @@ func setup_touch_buttons():
 	
 	# ボタンの見た目を設定
 	_setup_button_visuals()
+	
+	print("Touch buttons set up - shoot connected: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
+	print("Touch buttons set up - jump connected: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
 
 func _on_shoot_button_pressed():
+	print("Shoot button pressed!")
 	shoot_pressed.emit()
 
 func _on_jump_button_pressed():
+	print("Jump button pressed!")
 	jump_pressed.emit()
 
 func _setup_button_visuals():
@@ -51,6 +56,7 @@ func _setup_button_visuals():
 	shoot_stylebox.corner_radius_top_right = 30
 	shoot_stylebox.corner_radius_bottom_left = 30
 	shoot_stylebox.corner_radius_bottom_right = 30
+	shoot_button.add_theme_stylebox_override("normal", shoot_stylebox)
 	
 	# ジャンプボタンの見た目
 	var jump_stylebox = StyleBoxFlat.new()
@@ -59,6 +65,7 @@ func _setup_button_visuals():
 	jump_stylebox.corner_radius_top_right = 30
 	jump_stylebox.corner_radius_bottom_left = 30
 	jump_stylebox.corner_radius_bottom_right = 30
+	jump_button.add_theme_stylebox_override("normal", jump_stylebox)
 
 func _on_movement_area_input(event: InputEvent):
 	if event is InputEventScreenTouch:
