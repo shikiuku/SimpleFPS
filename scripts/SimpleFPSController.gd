@@ -16,6 +16,10 @@ extends CharacterBody3D
 # 弾丸のプリロード
 var bullet_scene = preload("res://scenes/Bullet.tscn")
 
+# モバイル入力関連
+var mobile_movement = Vector2.ZERO
+var mobile_ui: CanvasLayer = null
+
 func _ready():
 	# マルチプレイヤーのピアが存在するまで待機
 	await get_tree().process_frame
@@ -37,7 +41,12 @@ func setup_multiplayer():
 	# 権限に基づいて初期化
 	if is_multiplayer_authority():
 		# 自分のプレイヤー（ローカル）
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		setup_mobile_ui()
+		
+		# PCの場合のみマウスをキャプチャ
+		if not _is_mobile():
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		
 		camera.current = true
 		mesh_instance.visible = false
 		print("Local player initialized: ", name, " (BLUE - INVISIBLE TO SELF)")
@@ -50,26 +59,62 @@ func setup_multiplayer():
 		mesh_instance.set_surface_override_material(0, new_material)
 		print("Remote player initialized: ", name, " (RED - VISIBLE)")
 
+func _is_mobile() -> bool:
+	return OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+
+func setup_mobile_ui():
+	if not _is_mobile():
+		return
+	
+	# モバイルUI を読み込み
+	var mobile_ui_scene = preload("res://scenes/MobileUI.tscn")
+	mobile_ui = mobile_ui_scene.instantiate()
+	get_tree().current_scene.add_child(mobile_ui)
+	
+	# シグナルを接続
+	mobile_ui.move_input.connect(_on_mobile_move_input)
+	mobile_ui.look_input.connect(_on_mobile_look_input)
+	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
+	mobile_ui.jump_pressed.connect(_on_mobile_jump)
+
+func _on_mobile_move_input(direction: Vector2):
+	mobile_movement = direction
+
+func _on_mobile_look_input(delta: Vector2):
+	# マウス操作と同じロジック
+	rotate_y(-delta.x)
+	camera.rotate_x(-delta.y)
+	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
+
+func _on_mobile_shoot():
+	shoot()
+
+func _on_mobile_jump():
+	if is_on_floor():
+		velocity.y = jump_velocity
+
 func _input(event):
 	# 自分のプレイヤーのみが入力を処理
 	if not is_multiplayer_authority():
 		return
+	
+	# PCでのマウス操作（モバイルでは無視）
+	if not _is_mobile():
+		if event is InputEventMouseMotion:
+			# マウスでカメラ回転
+			rotate_y(-event.relative.x * mouse_sensitivity)
+			camera.rotate_x(-event.relative.y * mouse_sensitivity)
+			camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
 		
-	if event is InputEventMouseMotion:
-		# マウスでカメラ回転
-		rotate_y(-event.relative.x * mouse_sensitivity)
-		camera.rotate_x(-event.relative.y * mouse_sensitivity)
-		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
-	
-	if event.is_action_pressed("mouseMode"):
-		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		else:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	
-	# 射撃
-	if event.is_action_pressed("shoot"):
-		shoot()
+		if event.is_action_pressed("mouseMode"):
+			if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+			else:
+				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		
+		# PC射撃
+		if event.is_action_pressed("shoot"):
+			shoot()
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
@@ -105,8 +150,10 @@ func handle_movement(delta):
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 
-	# 移動入力を取得
+	# 移動入力を取得（PC＋モバイル対応）
 	var input_dir = Vector2.ZERO
+	
+	# PC入力
 	if Input.is_action_pressed("move_forward"):
 		input_dir.y -= 1
 	if Input.is_action_pressed("move_backward"):
@@ -115,6 +162,10 @@ func handle_movement(delta):
 		input_dir.x -= 1
 	if Input.is_action_pressed("move_right"):
 		input_dir.x += 1
+	
+	# モバイル入力を追加
+	if _is_mobile() and mobile_movement != Vector2.ZERO:
+		input_dir = mobile_movement
 	
 	# 移動速度を決定
 	var current_speed = run_speed if Input.is_action_pressed("run") else walk_speed
@@ -137,9 +188,13 @@ func handle_movement(delta):
 	move_and_slide()
 
 func shoot():
-	# 射撃位置と方向を計算
-	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
-	var shoot_direction = -camera.global_transform.basis.z
+	# 射撃位置と方向を計算（型を明示的に指定）
+	var shoot_position: Vector3 = camera.global_position + camera.global_transform.basis.z * -0.5
+	var shoot_direction: Vector3 = -camera.global_transform.basis.z
+	
+	# デバッグ: 型を確認
+	print("DEBUG shoot - Position type: ", typeof(shoot_position), " Value: ", shoot_position)
+	print("DEBUG shoot - Direction type: ", typeof(shoot_direction), " Value: ", shoot_direction)
 	
 	# ローカルで弾丸を生成
 	_spawn_bullet(shoot_position, shoot_direction)
@@ -166,5 +221,7 @@ func update_remote_position(new_position: Vector3, new_rotation: float):
 # RPC関数：他のプレイヤーの弾丸を生成
 @rpc("any_peer", "reliable")
 func spawn_bullet_remote(position: Vector3, direction: Vector3):
+	print("DEBUG RPC received - Position type: ", typeof(position), " Value: ", position)
+	print("DEBUG RPC received - Direction type: ", typeof(direction), " Value: ", direction)
 	# 他のプレイヤーの弾丸を生成
 	_spawn_bullet(position, direction)
