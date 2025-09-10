@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "./Simple FPS.x86_64 --headless"
+startCommand = "./simple-fps-server --headless"
 restartPolicyType = "always"
 
 [[deploy.environmentVariables]]

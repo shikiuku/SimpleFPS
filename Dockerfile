@@ -17,11 +17,13 @@ WORKDIR /app
 # エクスポート済みサーバーファイルをコピー
 COPY build/Simple* ./
 
-# サーバーバイナリに実行権限を付与
-RUN chmod +x "Simple FPS.x86_64"
+# サーバーバイナリをリネームして実行権限を付与
+RUN mv "Simple FPS.x86_64" simple-fps-server && \
+    mv "Simple FPS.pck" simple-fps-server.pck && \
+    chmod +x simple-fps-server
 
 # ポートを公開
 EXPOSE $PORT
 
 # エクスポート済みサーバーを起動
-CMD ["./Simple FPS.x86_64", "--headless"]
+CMD ["./simple-fps-server", "--headless"]
