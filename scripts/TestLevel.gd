@@ -25,8 +25,20 @@ func _on_player_connected(peer_id: int):
 	print("Is server: ", multiplayer.is_server())
 	print("My ID: ", multiplayer.get_unique_id())
 	
-	# 新しく接続したプレイヤーのみをスポーン
+	# 新しく接続したプレイヤーをスポーン
 	spawn_player(peer_id)
+	
+	# 新しく接続したプレイヤーに既存のプレイヤーを見せる
+	var my_id = multiplayer.get_unique_id()
+	if not has_node(str(my_id)):
+		print("Spawning myself for new player: ", my_id)
+		spawn_player(my_id)
+	
+	# 他の既存プレイヤーもスポーン（重複しないよう確認）
+	for existing_peer_id in multiplayer.get_peers():
+		if existing_peer_id != peer_id and not has_node(str(existing_peer_id)):
+			print("Spawning existing player for new player: ", existing_peer_id)
+			spawn_player(existing_peer_id)
 	
 	var player_count = 0
 	for child in get_children():
@@ -79,10 +91,13 @@ func start_multiplayer_session():
 	print("TestLevel: spawn my player ID: ", my_id)
 	print("TestLevel: existing peers: ", multiplayer.get_peers())
 	
-	# サーバーかクライアントかに関係なく、自分だけをスポーン
+	# 自分をスポーン
 	spawn_player(my_id)
 	
-	# 注意: 他のプレイヤーは_on_player_connected()で自動的にスポーンされる
+	# 既存の接続済みプレイヤーをすべてスポーン
+	for peer_id in multiplayer.get_peers():
+		print("TestLevel: spawn existing peer player ID: ", peer_id)
+		spawn_player(peer_id)
 	
 	# 現在のプレイヤー状況を表示
 	print_player_status()

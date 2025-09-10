@@ -118,14 +118,16 @@ func _on_mobile_look_input(delta: Vector2):
 
 func _on_mobile_shoot():
 	if is_multiplayer_authority():
-		print("Mobile shoot triggered!")
+		print("Mobile shoot triggered - calling shoot()")
 		shoot()
+		print("Mobile shoot completed")
+
+var mobile_jump_requested = false
 
 func _on_mobile_jump():
 	if is_multiplayer_authority():
 		print("Mobile jump triggered!")
-		if is_on_floor():
-			velocity.y = jump_velocity
+		mobile_jump_requested = true
 
 func _input(event):
 	# 自分のプレイヤーのみが入力を処理
@@ -160,7 +162,7 @@ func _physics_process(delta):
 		sync_rotation_y = rotation.y
 		
 		# RPC経由で位置を送信（確実に全員に届ける）
-		if multiplayer.has_multiplayer_peer():
+		if multiplayer.has_multiplayer_peer() and multiplayer.get_peers().size() > 0:
 			update_remote_position.rpc(sync_position, sync_rotation_y)
 		
 		# デバッグ: 同期データを送信していることを確認（頻度を下げる）
@@ -180,9 +182,11 @@ func handle_movement(delta):
 	if not is_on_floor():
 		velocity.y += get_gravity().y * delta
 	
-	# ジャンプ
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	# ジャンプ（PC + モバイル対応）
+	var should_jump = (Input.is_action_just_pressed("jump") or mobile_jump_requested) and is_on_floor()
+	if should_jump:
 		velocity.y = jump_velocity
+		mobile_jump_requested = false  # リセット
 
 	# 移動入力を取得（PC＋モバイル対応）
 	var input_dir = Vector2.ZERO
@@ -230,7 +234,7 @@ func shoot():
 	_spawn_bullet(shoot_position, shoot_direction)
 	
 	# 他のプレイヤーにも弾丸を生成させる
-	if multiplayer.has_multiplayer_peer():
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_peers().size() > 0:
 		spawn_bullet_remote.rpc(shoot_position, shoot_direction)
 
 # 弾丸を実際に生成する関数
