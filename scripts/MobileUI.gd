@@ -35,11 +35,13 @@ func _ready():
 		shoot_button.pressed.connect(_on_shoot_pressed)
 		shoot_button.button_down.connect(_on_shoot_button_down)
 		shoot_button.button_up.connect(_on_shoot_button_up)
+		shoot_button.gui_input.connect(_on_shoot_button_touch)
 		print("Shoot button connected")
 	if jump_button:
 		jump_button.pressed.connect(_on_jump_pressed)
 		jump_button.button_down.connect(_on_jump_button_down)
 		jump_button.button_up.connect(_on_jump_button_up)
+		jump_button.gui_input.connect(_on_jump_button_touch)
 		print("Jump button connected")
 	
 	# ジョイスティック初期化（新版）
@@ -66,6 +68,7 @@ func _ready():
 # 全てのタッチ状態をクリーンアップ
 func _cleanup_all_touches():
 	print("=== CLEANUP ALL TOUCHES ===")
+	print("Previous active touch IDs: ", active_touch_ids)
 	joystick_touch_id = -1
 	view_touch_id = -1
 	active_touch_ids.clear()
@@ -74,6 +77,7 @@ func _cleanup_all_touches():
 	jump_button_pressed = false
 	_reset_joystick_knob()
 	move_input.emit(Vector2.ZERO)
+	print("All touch states cleaned")
 
 # フォーカス失った時のクリーンアップ
 func _notification(what):
@@ -126,7 +130,12 @@ func _on_movement_touch(event: InputEvent):
 				joystick_touch_id = event.index
 				active_touch_ids[event.index] = "joystick"
 				_update_joystick(event.position)
-				print("Joystick touch started: ", event.position, " ID: ", event.index)
+				print("=== JOYSTICK TOUCH STARTED ===")
+				print("Position: ", event.position, " ID: ", event.index)
+				print("Active touches: ", active_touch_ids)
+			else:
+				print("=== JOYSTICK TOUCH BLOCKED ===")
+				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
 		elif not event.pressed and event.index == joystick_touch_id:
 			# タッチ終了
 			joystick_touch_id = -1
@@ -190,13 +199,19 @@ func _on_view_touch(event: InputEvent):
 			if not active_touch_ids.has(event.index):
 				# ジョイスティックエリア内の場合は視点操作を開始しない
 				if _is_position_in_joystick_area(event.position):
-					print("View touch ignored - position in joystick area: ", event.position)
+					print("=== VIEW TOUCH IGNORED - IN JOYSTICK AREA ===")
+					print("Position: ", event.position)
 					return
 				
 				# 視点操作開始
 				view_touch_id = event.index
 				active_touch_ids[event.index] = "view"
-				print("View touch started: ", event.position, " ID: ", event.index)
+				print("=== VIEW TOUCH STARTED ===")
+				print("Position: ", event.position, " ID: ", event.index)
+				print("Active touches: ", active_touch_ids)
+			else:
+				print("=== VIEW TOUCH BLOCKED ===")
+				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
 		elif not event.pressed and event.index == view_touch_id:
 			# 視点操作終了
 			view_touch_id = -1
@@ -265,3 +280,26 @@ func _on_jump_button_up():
 	jump_button_pressed = false
 	is_any_button_pressed = shoot_button_pressed  # 他のボタンがまだ押されているかチェック
 	print("Jump button UP - view sensitivity: ", "reduced" if is_any_button_pressed else "normal")
+
+# ボタンタッチIDの追跡
+func _on_shoot_button_touch(event: InputEvent):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touch_ids[event.index] = "shoot_button"
+			print("=== SHOOT BUTTON TOUCH START ===")
+			print("Touch ID: ", event.index, " Position: ", event.position)
+		else:
+			active_touch_ids.erase(event.index)
+			print("=== SHOOT BUTTON TOUCH END ===")
+			print("Touch ID: ", event.index)
+
+func _on_jump_button_touch(event: InputEvent):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touch_ids[event.index] = "jump_button"
+			print("=== JUMP BUTTON TOUCH START ===")
+			print("Touch ID: ", event.index, " Position: ", event.position)
+		else:
+			active_touch_ids.erase(event.index)
+			print("=== JUMP BUTTON TOUCH END ===")
+			print("Touch ID: ", event.index)
