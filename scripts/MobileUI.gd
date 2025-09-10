@@ -19,6 +19,8 @@ signal jump_pressed
 var joystick_touch_id = -1
 var view_touch_id = -1
 var active_touch_ids = {}  # アクティブなタッチを追跡
+var button_touch_ids = []  # ボタンのタッチIDを追跡
+var is_any_button_pressed = false  # いずれかのボタンが押されているか
 
 # ジョイスティック設定
 var joystick_center = Vector2.ZERO
@@ -29,12 +31,16 @@ var knob_center_offset = Vector2(15, 15)  # ノブのサイズの半分
 func _ready():
 	print("=== MobileUI INITIALIZATION ===")
 	
-	# ボタン接続
+	# ボタン接続（タッチ追跡も追加）
 	if shoot_button:
 		shoot_button.pressed.connect(_on_shoot_pressed)
+		shoot_button.button_down.connect(_on_shoot_button_down)
+		shoot_button.button_up.connect(_on_shoot_button_up)
 		print("Shoot button connected")
 	if jump_button:
 		jump_button.pressed.connect(_on_jump_pressed)
+		jump_button.button_down.connect(_on_jump_button_down)
+		jump_button.button_up.connect(_on_jump_button_up)
 		print("Jump button connected")
 	
 	# ジョイスティック初期化
@@ -62,6 +68,7 @@ func _cleanup_all_touches():
 	joystick_touch_id = -1
 	view_touch_id = -1
 	active_touch_ids.clear()
+	button_touch_ids.clear()
 	_reset_knob()
 	move_input.emit(Vector2.ZERO)
 
@@ -149,10 +156,18 @@ func _on_view_touch(event: InputEvent):
 	elif event is InputEventScreenDrag and event.index == view_touch_id:
 		# 視点ドラッグ（自分のタッチIDのみ処理）
 		if active_touch_ids.get(event.index) == "view":
-			var sensitivity = 0.001
+			# ボタンが押されている時は感度を大幅に下げる
+			var base_sensitivity = 0.00035
+			var sensitivity = base_sensitivity * 0.3 if is_any_button_pressed else base_sensitivity
+			
 			var delta = event.relative * sensitivity
+			
+			# 過度な動きを制限（視点がバグらないように）
+			var max_delta = 0.08 if not is_any_button_pressed else 0.03
+			delta = delta.limit_length(max_delta)
+			
 			look_input.emit(delta)
-			print("Look delta: ", delta, " ID: ", event.index)
+			print("Look delta: ", delta, " ID: ", event.index, " Button pressed: ", is_any_button_pressed)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
@@ -161,3 +176,20 @@ func _on_shoot_pressed():
 func _on_jump_pressed():
 	print("JUMP BUTTON PRESSED!")
 	jump_pressed.emit()
+
+# ボタン状態の追跡
+func _on_shoot_button_down():
+	is_any_button_pressed = true
+	print("Shoot button DOWN - reducing view sensitivity")
+
+func _on_shoot_button_up():
+	is_any_button_pressed = false
+	print("Shoot button UP - restoring view sensitivity")
+
+func _on_jump_button_down():
+	is_any_button_pressed = true
+	print("Jump button DOWN - reducing view sensitivity")
+
+func _on_jump_button_up():
+	is_any_button_pressed = false
+	print("Jump button UP - restoring view sensitivity")

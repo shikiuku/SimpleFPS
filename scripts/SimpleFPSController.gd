@@ -132,9 +132,8 @@ func _input(event):
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	# タッチイベントは完全に無視（MobileUIが処理）
+	# タッチイベントはMobileUIに任せる（処理済みにはしない）
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		get_viewport().set_input_as_handled()  # 確実に処理済みにする
 		return
 	
 	# PC環境でのマウス射撃（タッチデバイス以外）
@@ -148,10 +147,11 @@ func _unhandled_input(event):
 	if not is_multiplayer_authority():
 		return
 		
-	# 全てのタッチイベントを無視
-	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		get_viewport().set_input_as_handled()
-		return
+	# タッチイベントで射撃処理がされないようにのみブロック
+	if event is InputEventScreenTouch and event.pressed:
+		# タッチ射撃のみを無効化
+		if _is_touch_device():
+			return
 
 # タッチデバイスかどうかを判定
 func _is_touch_device() -> bool:
