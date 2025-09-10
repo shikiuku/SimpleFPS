@@ -18,6 +18,7 @@ signal jump_pressed
 # タッチ管理
 var joystick_touch_id = -1
 var view_touch_id = -1
+var active_touch_ids = {}  # アクティブなタッチを追跡
 
 # ジョイスティック設定
 var joystick_center = Vector2.ZERO
@@ -55,6 +56,20 @@ func _ready():
 	
 	print("MobileUI setup complete!")
 
+# 全てのタッチ状態をクリーンアップ
+func _cleanup_all_touches():
+	print("=== CLEANUP ALL TOUCHES ===")
+	joystick_touch_id = -1
+	view_touch_id = -1
+	active_touch_ids.clear()
+	_reset_knob()
+	move_input.emit(Vector2.ZERO)
+
+# フォーカス失った時のクリーンアップ
+func _notification(what):
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_cleanup_all_touches()
+
 func _reset_knob():
 	if joystick_knob and joystick_base:
 		# ノブをベースの中心に配置
@@ -67,20 +82,25 @@ func _on_movement_touch(event: InputEvent):
 		
 	if event is InputEventScreenTouch:
 		if event.pressed and joystick_touch_id == -1:
-			# タッチ開始
-			joystick_touch_id = event.index
-			_update_joystick(event.position)
-			print("Joystick touch started: ", event.position)
+			# 他の操作と競合していないかチェック
+			if not active_touch_ids.has(event.index):
+				# タッチ開始
+				joystick_touch_id = event.index
+				active_touch_ids[event.index] = "joystick"
+				_update_joystick(event.position)
+				print("Joystick touch started: ", event.position, " ID: ", event.index)
 		elif not event.pressed and event.index == joystick_touch_id:
 			# タッチ終了
 			joystick_touch_id = -1
+			active_touch_ids.erase(event.index)
 			_reset_knob()
 			move_input.emit(Vector2.ZERO)
-			print("Joystick touch ended")
+			print("Joystick touch ended ID: ", event.index)
 	
 	elif event is InputEventScreenDrag and event.index == joystick_touch_id:
-		# ドラッグ中
-		_update_joystick(event.position)
+		# ドラッグ中（自分のタッチIDのみ処理）
+		if active_touch_ids.get(event.index) == "joystick":
+			_update_joystick(event.position)
 
 func _update_joystick(touch_pos: Vector2):
 	if not joystick_base or not joystick_knob:
@@ -114,22 +134,25 @@ func _update_joystick(touch_pos: Vector2):
 func _on_view_touch(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed and view_touch_id == -1:
-			# 視点操作開始（ジョイスティックと競合しないようにチェック）
-			if joystick_touch_id == -1 or joystick_touch_id != event.index:
+			# 他の操作と競合していないかチェック
+			if not active_touch_ids.has(event.index):
+				# 視点操作開始
 				view_touch_id = event.index
-				print("View touch started: ", event.position)
+				active_touch_ids[event.index] = "view"
+				print("View touch started: ", event.position, " ID: ", event.index)
 		elif not event.pressed and event.index == view_touch_id:
 			# 視点操作終了
 			view_touch_id = -1
-			print("View touch ended")
+			active_touch_ids.erase(event.index)
+			print("View touch ended ID: ", event.index)
 	
 	elif event is InputEventScreenDrag and event.index == view_touch_id:
-		# 視点ドラッグ（ジョイスティックと競合しないようにチェック）
-		if joystick_touch_id != event.index:
+		# 視点ドラッグ（自分のタッチIDのみ処理）
+		if active_touch_ids.get(event.index) == "view":
 			var sensitivity = 0.001
 			var delta = event.relative * sensitivity
 			look_input.emit(delta)
-			print("Look delta: ", delta)
+			print("Look delta: ", delta, " ID: ", event.index)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")

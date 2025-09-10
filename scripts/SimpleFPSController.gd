@@ -132,13 +132,36 @@ func _input(event):
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	# タッチイベントは完全にMobileUIに任せる
+	# タッチイベントは完全に無視（MobileUIが処理）
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		get_viewport().set_input_as_handled()  # 確実に処理済みにする
 		return
 	
-	# PC環境でのマウス射撃
+	# PC環境でのマウス射撃（タッチデバイス以外）
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		shoot()
+		# タッチデバイスでないことを確認
+		if not _is_touch_device():
+			shoot()
+
+func _unhandled_input(event):
+	# 自分のプレイヤーのみが入力を処理
+	if not is_multiplayer_authority():
+		return
+		
+	# 全てのタッチイベントを無視
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		get_viewport().set_input_as_handled()
+		return
+
+# タッチデバイスかどうかを判定
+func _is_touch_device() -> bool:
+	# Webブラウザの場合はタッチデバイスと見なす
+	if OS.has_feature("web"):
+		return true
+	# モバイルプラットフォームの場合
+	if OS.has_feature("mobile"):
+		return true
+	return false
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
