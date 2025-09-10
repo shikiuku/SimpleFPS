@@ -42,8 +42,9 @@ func spawn_player(peer_id: int):
 	var player = player_scene.instantiate()
 	player.name = str(peer_id)
 	
-	# ランダムな位置に配置
-	player.position = Vector3(randf_range(-5, 5), 2, randf_range(-5, 5))
+	# ランダムな位置に配置（サーバーも含めて）
+	var spawn_position = Vector3(randf_range(-5, 5), 2, randf_range(-5, 5))
+	player.position = spawn_position
 	
 	# シーンに追加
 	add_child(player, true)
@@ -52,6 +53,10 @@ func spawn_player(peer_id: int):
 	player.set_multiplayer_authority(peer_id)
 	
 	print("Player spawned: ", player.name, " at ", player.position, " Authority: ", player.get_multiplayer_authority())
+	
+	# 位置が正しく設定されているか再確認
+	await get_tree().process_frame
+	print("Player position confirmed: ", player.name, " at ", player.global_position)
 
 # サーバーが開始されたときに呼び出される
 func start_multiplayer_session():

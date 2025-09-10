@@ -68,4 +68,5 @@ func _print_server_status():
 	print("=== Server Status ===")
 	print("Active connections: ", multiplayer.get_peers().size())
 	print("Server ID: ", multiplayer.get_unique_id())
+	print("Current scene: ", get_tree().current_scene.name if get_tree().current_scene else "None")
 	print("===================")

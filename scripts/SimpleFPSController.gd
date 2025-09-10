@@ -25,10 +25,14 @@ func _ready():
 	var peer_id = name.to_int()
 	set_multiplayer_authority(peer_id)
 	
+	# 初期位置を設定（重要！）
+	sync_position = global_position
+	sync_rotation_y = rotation.y
+	
 	# MultiplayerSynchronizerの設定
 	call_deferred("setup_multiplayer")
 	
-	print("Player _ready: ", name, " Authority: ", get_multiplayer_authority())
+	print("Player _ready: ", name, " Authority: ", get_multiplayer_authority(), " Position: ", global_position)
 
 func setup_multiplayer():
 	if multiplayer_synchronizer:
@@ -88,7 +92,6 @@ func _physics_process(delta):
 			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y, " Authority: ", get_multiplayer_authority())
 	else:
 		# リモートプレイヤーは同期された値を適用
-		var old_pos = global_position
 		global_position = global_position.lerp(sync_position, 0.1)
 		rotation.y = lerp_angle(rotation.y, sync_rotation_y, 0.1)
 		
