@@ -33,6 +33,9 @@ func _ready():
 func setup_multiplayer():
 	if multiplayer_synchronizer:
 		multiplayer_synchronizer.public_visibility = true
+		# 同期の権限を明確に設定
+		multiplayer_synchronizer.set_multiplayer_authority(get_multiplayer_authority())
+		print("MultiplayerSynchronizer authority set to: ", multiplayer_synchronizer.get_multiplayer_authority())
 	
 	# 権限に基づいて初期化
 	if is_multiplayer_authority():
@@ -76,21 +79,21 @@ func _physics_process(delta):
 		# 自分のプレイヤーのみ物理処理を行う
 		handle_movement(delta)
 		
-		# 同期用変数を更新
+		# 同期用変数を更新（毎フレーム）
 		sync_position = global_position
 		sync_rotation_y = rotation.y
 		
 		# デバッグ: 同期データを送信していることを確認
-		if name == "1" and Engine.get_process_frames() % 60 == 0:  # 1秒に1回
-			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y)
+		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y, " Authority: ", get_multiplayer_authority())
 	else:
 		# リモートプレイヤーは同期された値を適用
 		var old_pos = global_position
 		global_position = global_position.lerp(sync_position, 0.1)
 		rotation.y = lerp_angle(rotation.y, sync_rotation_y, 0.1)
 		
-		# デバッグ: 同期データを受信していることを確認
-		if name == "1" and Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+		# デバッグ: 同期データを受信していることを確認（すべてのリモートプレイヤー）
+		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
 			print("受信中 - Player: ", name, " 受信Pos: ", sync_position, " 現在Pos: ", global_position)
 
 func handle_movement(delta):
