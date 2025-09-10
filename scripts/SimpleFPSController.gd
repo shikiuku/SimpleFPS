@@ -61,7 +61,14 @@ func setup_multiplayer():
 		print("Remote player initialized: ", name, " (RED - VISIBLE)")
 
 func _is_mobile() -> bool:
-	return OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+	var is_mobile_os = OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile")
+	var has_touchscreen = DisplayServer.is_touchscreen_available()
+	var os_name = OS.get_name()
+	
+	# Web版でも表示するように強制
+	var result = is_mobile_os or has_touchscreen or os_name == "Web"
+	print("SimpleFPSController mobile detection - OS: ", os_name, " Result: ", result)
+	return result
 
 func setup_mobile_ui():
 	if not _is_mobile():
@@ -77,6 +84,9 @@ func setup_mobile_ui():
 	mobile_ui.look_input.connect(_on_mobile_look_input)
 	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
 	mobile_ui.jump_pressed.connect(_on_mobile_jump)
+	
+	print("Mobile UI setup complete - all signals connected!")
+	print("Mobile UI node: ", mobile_ui)
 
 func setup_game_ui():
 	# GameUIを読み込み（全プレイヤーで共有、1回だけ作成）
@@ -230,3 +240,25 @@ func update_remote_position(new_position: Vector3, new_rotation: float):
 func spawn_bullet_remote(position: Vector3, direction: Vector3):
 	# 他のプレイヤーの弾丸を生成
 	_spawn_bullet(position, direction)
+
+# モバイル入力ハンドラー
+func _on_mobile_move_input(direction: Vector2):
+	mobile_movement = direction
+	print("Mobile move input: ", direction)
+
+func _on_mobile_look_input(delta: Vector2):
+	if is_multiplayer_authority():
+		camera_holder.rotate_y(delta.x)
+		camera.rotate_x(delta.y)
+		camera.rotation.x = clamp(camera.rotation.x, -PI/2, PI/2)
+
+func _on_mobile_shoot():
+	if is_multiplayer_authority():
+		print("Mobile shoot triggered!")
+		shoot()
+
+func _on_mobile_jump():
+	if is_multiplayer_authority():
+		print("Mobile jump triggered!")
+		if is_on_floor():
+			velocity.y = jump_velocity

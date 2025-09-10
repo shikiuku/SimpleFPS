@@ -21,7 +21,14 @@ var joystick_dead_zone = 10.0
 
 func _is_mobile() -> bool:
 	# モバイル環境の判定（Web版でもタッチ対応デバイスなら表示）
-	return OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+	var is_mobile_os = OS.get_name() == "Android" or OS.get_name() == "iOS" or OS.has_feature("mobile")
+	var has_touchscreen = DisplayServer.is_touchscreen_available()
+	var os_name = OS.get_name()
+	
+	print("Mobile detection - OS: ", os_name, " Mobile OS: ", is_mobile_os, " Touchscreen: ", has_touchscreen)
+	
+	# Web版でタッチスクリーンが利用可能な場合もモバイルとして扱う
+	return is_mobile_os or has_touchscreen or os_name == "Web"
 
 func setup_touch_buttons():
 	# 移動ジョイスティックエリア
@@ -30,6 +37,12 @@ func setup_touch_buttons():
 	# 視点操作エリア
 	view_area.gui_input.connect(_on_view_area_input)
 	
+	# ボタンのタッチイベント処理も追加
+	if shoot_button:
+		shoot_button.gui_input.connect(_on_shoot_button_touch)
+	if jump_button:
+		jump_button.gui_input.connect(_on_jump_button_touch)
+	
 	# ボタンシグナルを遅延接続（より確実）
 	call_deferred("_connect_buttons")
 	
@@ -37,17 +50,24 @@ func setup_touch_buttons():
 	_setup_button_visuals()
 
 func _connect_buttons():
-	# ボタンが完全に準備されてから接続
-	if shoot_button and not shoot_button.pressed.is_connected(_on_shoot_button_pressed):
-		shoot_button.pressed.connect(_on_shoot_button_pressed)
+	# ボタンが完全に準備されてから接続（複数のシグナルを使用）
+	if shoot_button:
+		if not shoot_button.pressed.is_connected(_on_shoot_button_pressed):
+			shoot_button.pressed.connect(_on_shoot_button_pressed)
+		if not shoot_button.button_down.is_connected(_on_shoot_button_down):
+			shoot_button.button_down.connect(_on_shoot_button_down)
 		print("Shoot button connected!")
 	
-	if jump_button and not jump_button.pressed.is_connected(_on_jump_button_pressed):
-		jump_button.pressed.connect(_on_jump_button_pressed)
+	if jump_button:
+		if not jump_button.pressed.is_connected(_on_jump_button_pressed):
+			jump_button.pressed.connect(_on_jump_button_pressed)
+		if not jump_button.button_down.is_connected(_on_jump_button_down):
+			jump_button.button_down.connect(_on_jump_button_down)
 		print("Jump button connected!")
 	
-	print("Touch buttons final status - shoot connected: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
-	print("Touch buttons final status - jump connected: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
+	print("Touch buttons final status:")
+	print("  Shoot pressed: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
+	print("  Jump pressed: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
 
 func _on_shoot_button_pressed():
 	print("Shoot button pressed!")
@@ -56,6 +76,24 @@ func _on_shoot_button_pressed():
 func _on_jump_button_pressed():
 	print("Jump button pressed!")
 	jump_pressed.emit()
+
+func _on_shoot_button_down():
+	print("Shoot button down!")
+	shoot_pressed.emit()
+
+func _on_jump_button_down():
+	print("Jump button down!")
+	jump_pressed.emit()
+
+func _on_shoot_button_touch(event: InputEvent):
+	if event is InputEventScreenTouch and event.pressed:
+		print("Shoot button touched!")
+		shoot_pressed.emit()
+
+func _on_jump_button_touch(event: InputEvent):
+	if event is InputEventScreenTouch and event.pressed:
+		print("Jump button touched!")
+		jump_pressed.emit()
 
 func _setup_button_visuals():
 	# デフォルトボタン色を使用（カスタム色を削除）
