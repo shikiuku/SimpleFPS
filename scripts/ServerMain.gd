@@ -54,6 +54,11 @@ func start_server():
 func _on_player_connected(peer_id: int):
 	print("Player connected: ID=", peer_id)
 	print("Total players: ", multiplayer.get_peers().size() + 1)
+	
+	# 初回のプレイヤー接続時にTestLevelシーンに切り替え
+	if multiplayer.get_peers().size() == 1:
+		print("First player connected, switching to TestLevel...")
+		get_tree().change_scene_to_file("res://scenes/TestLevel.tscn")
 
 func _on_player_disconnected(peer_id: int):
 	print("Player disconnected: ID=", peer_id)
