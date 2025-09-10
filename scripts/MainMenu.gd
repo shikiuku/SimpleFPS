@@ -36,7 +36,7 @@ func _start_auto_connect():
 	
 	# タイムアウト処理（10秒）
 	await get_tree().create_timer(10.0).timeout
-	if not multiplayer.has_multiplayer_peer() or not multiplayer.is_connected():
+	if not multiplayer.has_multiplayer_peer() or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
 		status_label.text = "接続に失敗しました - サーバーを開始してください"
 		print("MainMenu: 接続タイムアウト")
 
