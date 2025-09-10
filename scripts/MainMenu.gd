@@ -12,12 +12,16 @@ func _ready():
 	_start_auto_connect()
 
 func _start_auto_connect():
-	# Railwayサーバーアドレス（デプロイ後に更新）
-	var server_address = "your-fps-server.railway.app"  # Railway URLに後で変更
+	# サーバーアドレスを環境変数から取得（優先順位：環境変数 > デバッグビルド > デフォルト）
+	var server_address = OS.get_environment("GAME_SERVER_URL")
 	
-	# テスト用：ローカル開発時
-	if OS.is_debug_build():
-		server_address = "127.0.0.1"  # ローカルテスト用
+	if server_address == "":
+		# テスト用：ローカル開発時
+		if OS.is_debug_build():
+			server_address = "127.0.0.1"  # ローカルテスト用
+		else:
+			# プロダクション用デフォルト（Railwayデプロイ後に更新）
+			server_address = "your-fps-server.railway.app"
 	
 	status_label.text = "Railwayサーバーに接続中..."
 	

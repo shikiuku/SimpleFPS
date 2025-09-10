@@ -1,10 +1,18 @@
 extends Node
 
 # Railway用サーバーメインシーン
-const PORT = 7000
+var PORT = 7000  # デフォルトポート
 const MAX_PLAYERS = 8
 
 func _ready():
+	# Railway環境変数からポート番号を取得
+	var env_port = OS.get_environment("PORT")
+	if env_port != "":
+		PORT = int(env_port)
+		print("Using Railway PORT: ", PORT)
+	else:
+		print("Using default PORT: ", PORT)
+	
 	print("=== Godot Multiplayer Server Starting ===")
 	print("Port: ", PORT)
 	print("Max Players: ", MAX_PLAYERS)
