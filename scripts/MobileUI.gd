@@ -83,6 +83,21 @@ func _reset_knob():
 		var base_center = joystick_base.size / 2
 		joystick_knob.position = base_center - knob_center_offset
 
+# ジョイスティックエリア内かどうかを判定
+func _is_position_in_joystick_area(global_pos: Vector2) -> bool:
+	if not joystick_base:
+		return false
+	
+	# ジョイスティックのグローバル位置を取得
+	var joystick_global_pos = joystick_base.global_position
+	var joystick_size = joystick_base.size
+	var joystick_rect = Rect2(joystick_global_pos, joystick_size)
+	
+	# マージンを追加してより確実に分離
+	joystick_rect = joystick_rect.grow(20)
+	
+	return joystick_rect.has_point(global_pos)
+
 func _on_movement_touch(event: InputEvent):
 	if not joystick_base or not joystick_knob:
 		return
@@ -134,7 +149,9 @@ func _update_joystick(touch_pos: Vector2):
 		var strength = (distance - joystick_dead_zone) / (joystick_radius - joystick_dead_zone)
 		var direction = touch_relative_to_base.normalized() * strength
 		move_input.emit(direction)
+		print("=== MOVE INPUT EMITTED ===")
 		print("Joystick move: ", direction)
+		print("Touch pos: ", touch_pos, " Distance: ", distance)
 	else:
 		move_input.emit(Vector2.ZERO)
 
@@ -143,6 +160,11 @@ func _on_view_touch(event: InputEvent):
 		if event.pressed and view_touch_id == -1:
 			# 他の操作と競合していないかチェック
 			if not active_touch_ids.has(event.index):
+				# ジョイスティックエリア内の場合は視点操作を開始しない
+				if _is_position_in_joystick_area(event.position):
+					print("View touch ignored - position in joystick area: ", event.position)
+					return
+				
 				# 視点操作開始
 				view_touch_id = event.index
 				active_touch_ids[event.index] = "view"
@@ -156,18 +178,32 @@ func _on_view_touch(event: InputEvent):
 	elif event is InputEventScreenDrag and event.index == view_touch_id:
 		# 視点ドラッグ（自分のタッチIDのみ処理）
 		if active_touch_ids.get(event.index) == "view":
-			# ボタンが押されている時は感度を大幅に下げる
+			# ボタンが押されている時やジョイスティック使用中は感度を下げる
 			var base_sensitivity = 0.00035
-			var sensitivity = base_sensitivity * 0.3 if is_any_button_pressed else base_sensitivity
+			var sensitivity_modifier = 1.0
 			
+			# ジョイスティックが使用中の場合は感度を下げる
+			if joystick_touch_id != -1:
+				sensitivity_modifier *= 0.5
+				
+			# ボタンが押されている時も感度を下げる
+			if is_any_button_pressed:
+				sensitivity_modifier *= 0.3
+			
+			var sensitivity = base_sensitivity * sensitivity_modifier
 			var delta = event.relative * sensitivity
 			
 			# 過度な動きを制限（視点がバグらないように）
-			var max_delta = 0.08 if not is_any_button_pressed else 0.03
+			var max_delta = 0.08
+			if joystick_touch_id != -1 or is_any_button_pressed:
+				max_delta = 0.03
 			delta = delta.limit_length(max_delta)
 			
 			look_input.emit(delta)
-			print("Look delta: ", delta, " ID: ", event.index, " Button pressed: ", is_any_button_pressed)
+			print("=== LOOK INPUT EMITTED ===")
+			print("Look delta: ", delta, " ID: ", event.index)
+			print("Joystick active: ", joystick_touch_id != -1, " Button pressed: ", is_any_button_pressed)
+			print("Event position: ", event.position, " Relative: ", event.relative)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
