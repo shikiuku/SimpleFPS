@@ -1,10 +1,8 @@
-# Railway用Godotサーバー
+# Railway用Godot専用サーバー
 FROM ubuntu:22.04
 
-# パッケージリストを更新し、必要なパッケージをインストール
+# 必要なライブラリをインストール
 RUN apt-get update && apt-get install -y \
-    wget \
-    unzip \
     ca-certificates \
     libfontconfig1 \
     libfreetype6 \
@@ -13,21 +11,17 @@ RUN apt-get update && apt-get install -y \
     libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Godot Headless バイナリをダウンロード
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip \
-    && unzip Godot_v4.4.1-stable_linux.x86_64.zip \
-    && mv Godot_v4.4.1-stable_linux.x86_64 /usr/local/bin/godot \
-    && chmod +x /usr/local/bin/godot \
-    && rm Godot_v4.4.1-stable_linux.x86_64.zip
-
 # 作業ディレクトリを設定
 WORKDIR /app
 
-# プロジェクトファイルをコピー
-COPY . .
+# エクスポート済みサーバーファイルをコピー
+COPY build/Simple* ./
+
+# サーバーバイナリに実行権限を付与
+RUN chmod +x "Simple FPS.x86_64"
 
 # ポートを公開
 EXPOSE $PORT
 
-# サーバーを起動（プロジェクト設定を使用してServerMainシーンを実行）
-CMD ["/usr/local/bin/godot", "--headless", "--path", "/app", "res://scenes/ServerMain.tscn"]
+# エクスポート済みサーバーを起動
+CMD ["./Simple FPS.x86_64", "--headless"]
