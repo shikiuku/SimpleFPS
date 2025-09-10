@@ -3,9 +3,9 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "/usr/local/bin/godot --headless --path /app res://scenes/ServerMain.tscn"
+startCommand = "./Simple FPS.x86_64 --headless"
 restartPolicyType = "always"
 
 [[deploy.environmentVariables]]
 name = "PORT"
-value = "7000"
+value = "8080"
