@@ -30,15 +30,24 @@ func setup_touch_buttons():
 	# 視点操作エリア
 	view_area.gui_input.connect(_on_view_area_input)
 	
-	# ボタンシグナルを接続
-	shoot_button.pressed.connect(_on_shoot_button_pressed)
-	jump_button.pressed.connect(_on_jump_button_pressed)
+	# ボタンシグナルを遅延接続（より確実）
+	call_deferred("_connect_buttons")
 	
 	# ボタンの見た目を設定
 	_setup_button_visuals()
+
+func _connect_buttons():
+	# ボタンが完全に準備されてから接続
+	if shoot_button and not shoot_button.pressed.is_connected(_on_shoot_button_pressed):
+		shoot_button.pressed.connect(_on_shoot_button_pressed)
+		print("Shoot button connected!")
 	
-	print("Touch buttons set up - shoot connected: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
-	print("Touch buttons set up - jump connected: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
+	if jump_button and not jump_button.pressed.is_connected(_on_jump_button_pressed):
+		jump_button.pressed.connect(_on_jump_button_pressed)
+		print("Jump button connected!")
+	
+	print("Touch buttons final status - shoot connected: ", shoot_button.pressed.is_connected(_on_shoot_button_pressed))
+	print("Touch buttons final status - jump connected: ", jump_button.pressed.is_connected(_on_jump_button_pressed))
 
 func _on_shoot_button_pressed():
 	print("Shoot button pressed!")
@@ -49,23 +58,8 @@ func _on_jump_button_pressed():
 	jump_pressed.emit()
 
 func _setup_button_visuals():
-	# 射撃ボタンの見た目
-	var shoot_stylebox = StyleBoxFlat.new()
-	shoot_stylebox.bg_color = Color(1, 0, 0, 0.5)  # 半透明の赤
-	shoot_stylebox.corner_radius_top_left = 30
-	shoot_stylebox.corner_radius_top_right = 30
-	shoot_stylebox.corner_radius_bottom_left = 30
-	shoot_stylebox.corner_radius_bottom_right = 30
-	shoot_button.add_theme_stylebox_override("normal", shoot_stylebox)
-	
-	# ジャンプボタンの見た目
-	var jump_stylebox = StyleBoxFlat.new()
-	jump_stylebox.bg_color = Color(0, 1, 0, 0.5)  # 半透明の緑
-	jump_stylebox.corner_radius_top_left = 30
-	jump_stylebox.corner_radius_top_right = 30
-	jump_stylebox.corner_radius_bottom_left = 30
-	jump_stylebox.corner_radius_bottom_right = 30
-	jump_button.add_theme_stylebox_override("normal", jump_stylebox)
+	# デフォルトボタン色を使用（カスタム色を削除）
+	print("Button visuals setup complete - using default theme colors")
 
 func _on_movement_area_input(event: InputEvent):
 	if event is InputEventScreenTouch:
@@ -121,3 +115,5 @@ func _ready():
 	joystick_visual.custom_minimum_size = Vector2(160, 160)
 	
 	print("Mobile UI initialized")
+	print("Shoot button node: ", shoot_button)
+	print("Jump button node: ", jump_button)
