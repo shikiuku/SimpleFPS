@@ -13,104 +13,123 @@ signal jump_pressed
 
 # アナログスティック
 @onready var joystick_base = $JoystickVisual/JoystickBase
-@onready var joystick_knob = $JoystickVisual/JoystickKnob
+@onready var joystick_knob = $JoystickVisual/JoystickBase/JoystickKnob
 
-var movement_touch_index = -1
-var view_touch_index = -1
-var movement_start_pos = Vector2.ZERO
-var last_view_pos = Vector2.ZERO
+# タッチ管理
+var joystick_touch_id = -1
+var view_touch_id = -1
 
+# ジョイスティック設定
+var joystick_center = Vector2.ZERO
 var joystick_radius = 50.0
 var joystick_dead_zone = 10.0
-
-# ジョイスティックの状態
-var joystick_center_pos = Vector2.ZERO
-var joystick_touch_index = -1
-var knob_initial_pos = Vector2.ZERO
+var knob_center_offset = Vector2(15, 15)  # ノブのサイズの半分
 
 func _ready():
 	print("=== MobileUI INITIALIZATION ===")
-	print("Always showing UI (no platform detection)")
 	
-	# ボタン接続（シンプルで確実な方法）
-	shoot_button.pressed.connect(_on_shoot_pressed)
-	jump_button.pressed.connect(_on_jump_pressed)
+	# ボタン接続
+	if shoot_button:
+		shoot_button.pressed.connect(_on_shoot_pressed)
+		print("Shoot button connected")
+	if jump_button:
+		jump_button.pressed.connect(_on_jump_pressed)
+		print("Jump button connected")
 	
-	# ジョイスティック接続
-	if joystick_base:
-		joystick_base.gui_input.connect(_on_joystick_input)
+	# ジョイスティック初期化
+	if joystick_base and joystick_knob:
+		# ジョイスティックの中心位置を計算
+		joystick_center = joystick_base.position + joystick_base.size / 2
+		print("Joystick center: ", joystick_center)
 		
-		# ジョイスティックの初期位置を設定
-		joystick_center_pos = joystick_base.position + joystick_base.size / 2
-		knob_initial_pos = joystick_knob.position
+		# ノブを中心に配置
+		_reset_knob()
 	
-	# タッチエリア接続
-	movement_area.gui_input.connect(_on_movement_input)
-	view_area.gui_input.connect(_on_view_input)
+	# タッチ入力接続
+	if movement_area:
+		movement_area.gui_input.connect(_on_movement_touch)
+		print("Movement area connected")
+	if view_area:
+		view_area.gui_input.connect(_on_view_touch)
+		print("View area connected")
 	
 	print("MobileUI setup complete!")
-	print("Shoot button: ", shoot_button)
-	print("Jump button: ", jump_button)
-	print("Movement area: ", movement_area)
-	print("View area: ", view_area)
 
-# _is_mobile()関数は削除済み - 常にモバイルUIを表示
+func _reset_knob():
+	if joystick_knob and joystick_base:
+		# ノブをベースの中心に配置
+		var base_center = joystick_base.size / 2
+		joystick_knob.position = base_center - knob_center_offset
 
-# ジョイスティックのイベント処理
-func _on_joystick_input(event: InputEvent):
+func _on_movement_touch(event: InputEvent):
 	if not joystick_base or not joystick_knob:
 		return
 		
 	if event is InputEventScreenTouch:
-		if event.pressed and joystick_touch_index == -1:
-			# ジョイスティックタッチ開始
-			joystick_touch_index = event.index
-			var touch_pos = event.position
-			_update_joystick_knob(touch_pos)
-			print("Joystick touch started at: ", touch_pos)
-		elif not event.pressed and event.index == joystick_touch_index:
-			# ジョイスティックタッチ終了
-			joystick_touch_index = -1
-			_reset_joystick()
+		if event.pressed and joystick_touch_id == -1:
+			# タッチ開始
+			joystick_touch_id = event.index
+			_update_joystick(event.position)
+			print("Joystick touch started: ", event.position)
+		elif not event.pressed and event.index == joystick_touch_id:
+			# タッチ終了
+			joystick_touch_id = -1
+			_reset_knob()
 			move_input.emit(Vector2.ZERO)
 			print("Joystick touch ended")
 	
-	elif event is InputEventScreenDrag and event.index == joystick_touch_index:
+	elif event is InputEventScreenDrag and event.index == joystick_touch_id:
 		# ドラッグ中
-		var touch_pos = event.position
-		_update_joystick_knob(touch_pos)
+		_update_joystick(event.position)
 
-func _update_joystick_knob(touch_pos: Vector2):
+func _update_joystick(touch_pos: Vector2):
 	if not joystick_base or not joystick_knob:
 		return
-		
-	# ジョイスティックベースの中心からの相対位置を計算
-	var joystick_base_global = joystick_base.global_position + joystick_base.size / 2
-	var delta = touch_pos - joystick_base_global
-	var distance = delta.length()
+	
+	# MovementAreaでのタッチ位置を、JoystickBaseの中心からの相対位置に変換
+	var base_center = joystick_base.size / 2
+	var touch_relative_to_base = touch_pos - base_center
+	var distance = touch_relative_to_base.length()
+	
+	print("Touch pos: ", touch_pos, " Base center: ", base_center, " Relative: ", touch_relative_to_base, " Distance: ", distance)
 	
 	# 半径内に制限
 	if distance > joystick_radius:
-		delta = delta.normalized() * joystick_radius
+		touch_relative_to_base = touch_relative_to_base.normalized() * joystick_radius
 		distance = joystick_radius
 	
-	# ノブの位置を更新
-	var knob_pos = knob_initial_pos + delta
-	joystick_knob.position = knob_pos
+	# ノブの位置を更新（ベース内での相対位置、ノブのサイズを考慮）
+	var new_knob_pos = base_center + touch_relative_to_base - knob_center_offset
+	joystick_knob.position = new_knob_pos
 	
 	# 入力値を計算（デッドゾーン適用）
 	if distance > joystick_dead_zone:
-		var input_strength = (distance - joystick_dead_zone) / (joystick_radius - joystick_dead_zone)
-		var normalized_input = delta.normalized() * input_strength
-		move_input.emit(normalized_input)
-		print("Joystick input: ", normalized_input)
+		var strength = (distance - joystick_dead_zone) / (joystick_radius - joystick_dead_zone)
+		var direction = touch_relative_to_base.normalized() * strength
+		move_input.emit(direction)
+		print("Joystick move: ", direction)
 	else:
 		move_input.emit(Vector2.ZERO)
 
-func _reset_joystick():
-	if joystick_knob:
-		# ノブを初期位置に戻す
-		joystick_knob.position = knob_initial_pos
+func _on_view_touch(event: InputEvent):
+	if event is InputEventScreenTouch:
+		if event.pressed and view_touch_id == -1:
+			# 視点操作開始（ジョイスティックと競合しないようにチェック）
+			if joystick_touch_id == -1 or joystick_touch_id != event.index:
+				view_touch_id = event.index
+				print("View touch started: ", event.position)
+		elif not event.pressed and event.index == view_touch_id:
+			# 視点操作終了
+			view_touch_id = -1
+			print("View touch ended")
+	
+	elif event is InputEventScreenDrag and event.index == view_touch_id:
+		# 視点ドラッグ（ジョイスティックと競合しないようにチェック）
+		if joystick_touch_id != event.index:
+			var sensitivity = 0.001
+			var delta = event.relative * sensitivity
+			look_input.emit(delta)
+			print("Look delta: ", delta)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
@@ -119,48 +138,3 @@ func _on_shoot_pressed():
 func _on_jump_pressed():
 	print("JUMP BUTTON PRESSED!")
 	jump_pressed.emit()
-
-func _on_movement_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed and movement_touch_index == -1:
-			# タッチ開始
-			movement_touch_index = event.index
-			movement_start_pos = event.position
-			print("Movement touch started at: ", event.position)
-		elif not event.pressed and event.index == movement_touch_index:
-			# タッチ終了
-			movement_touch_index = -1
-			move_input.emit(Vector2.ZERO)
-			print("Movement touch ended")
-	
-	elif event is InputEventScreenDrag and event.index == movement_touch_index:
-		# ドラッグ中
-		var delta = event.position - movement_start_pos
-		var distance = delta.length()
-		
-		if distance > joystick_dead_zone:
-			var direction = delta.normalized()
-			var strength = min(distance / joystick_radius, 1.0)
-			var final_input = direction * strength
-			move_input.emit(final_input)
-			print("Movement input: ", final_input)
-
-func _on_view_input(event: InputEvent):
-	if event is InputEventScreenTouch:
-		if event.pressed and view_touch_index == -1:
-			# 視点操作開始
-			view_touch_index = event.index
-			last_view_pos = event.position
-			print("View touch started at: ", event.position)
-		elif not event.pressed and event.index == view_touch_index:
-			# 視点操作終了
-			view_touch_index = -1
-			print("View touch ended")
-	
-	elif event is InputEventScreenDrag and event.index == view_touch_index:
-		# ドラッグ中
-		var delta = event.position - last_view_pos
-		last_view_pos = event.position
-		var final_input = delta * 0.002  # マウス感度と同様
-		look_input.emit(final_input)
-		print("Look input: ", final_input)

@@ -132,15 +132,13 @@ func _input(event):
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	# キーボード・マウス射撃（画面タップでの発射を防ぐため、マウスボタンのみに制限）
-	# タッチイベントを完全に除外
+	# タッチイベントは完全にMobileUIに任せる
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		return
 	
+	# PC環境でのマウス射撃
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		# PC環境でのみ動作するように、タッチデバイスを除外
-		if not DisplayServer.is_touchscreen_available():
-			shoot()
+		shoot()
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
