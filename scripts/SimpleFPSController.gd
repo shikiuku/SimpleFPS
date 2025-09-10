@@ -5,14 +5,13 @@ extends CharacterBody3D
 @export var jump_velocity = 8.0
 @export var mouse_sensitivity = 0.002
 
-# 同期用プロパティ（MultiplayerSynchronizerで使用）
+# 同期用プロパティ（RPC同期で使用）
 @export var sync_position := Vector3.ZERO
 @export var sync_rotation_y := 0.0
 
 @onready var camera = $CameraHolder/Camera3D
 @onready var camera_holder = $CameraHolder
 @onready var mesh_instance = $MeshInstance3D
-@onready var multiplayer_synchronizer = $MultiplayerSynchronizer
 
 # 弾丸のプリロード
 var bullet_scene = preload("res://scenes/Bullet.tscn")
@@ -35,12 +34,6 @@ func _ready():
 	print("Player _ready: ", name, " Authority: ", get_multiplayer_authority(), " Position: ", global_position)
 
 func setup_multiplayer():
-	if multiplayer_synchronizer:
-		multiplayer_synchronizer.public_visibility = true
-		# 同期の権限を明確に設定
-		multiplayer_synchronizer.set_multiplayer_authority(get_multiplayer_authority())
-		print("MultiplayerSynchronizer authority set to: ", multiplayer_synchronizer.get_multiplayer_authority())
-	
 	# 権限に基づいて初期化
 	if is_multiplayer_authority():
 		# 自分のプレイヤー（ローカル）
@@ -87,9 +80,13 @@ func _physics_process(delta):
 		sync_position = global_position
 		sync_rotation_y = rotation.y
 		
+		# RPC経由で位置を送信（確実に全員に届ける）
+		if multiplayer.has_multiplayer_peer():
+			update_remote_position.rpc(sync_position, sync_rotation_y)
+		
 		# デバッグ: 同期データを送信していることを確認
 		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
-			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y, " Authority: ", get_multiplayer_authority())
+			print("送信中 - Player: ", name, " Pos: ", sync_position, " Rot: ", sync_rotation_y, " Authority: ", get_multiplayer_authority(), " IsMoving: ", velocity.length() > 0.1)
 	else:
 		# リモートプレイヤーは同期された値を適用
 		global_position = global_position.lerp(sync_position, 0.1)
@@ -149,3 +146,11 @@ func shoot():
 	# 弾丸の方向と速度を設定
 	var shoot_direction = -camera.global_transform.basis.z
 	bullet.set_velocity(shoot_direction)
+
+# RPC関数：位置同期を受信
+@rpc("any_peer", "unreliable")
+func update_remote_position(new_position: Vector3, new_rotation: float):
+	# 権限チェック：自分の位置は更新しない
+	if not is_multiplayer_authority():
+		sync_position = new_position
+		sync_rotation_y = new_rotation

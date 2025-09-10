@@ -20,10 +20,26 @@ func _ready():
 		print("TestLevel: NetworkManager not found!")
 
 func _on_player_connected(peer_id: int):
+	print("=== PLAYER CONNECTED EVENT ===")
 	print("Player connected: ", peer_id)
-	if multiplayer.is_server():
-		# サーバーが新しいプレイヤーをスポーン
-		spawn_player(peer_id)
+	print("Is server: ", multiplayer.is_server())
+	print("My ID: ", multiplayer.get_unique_id())
+	
+	# サーバー・クライアント両方で相手をスポーン
+	spawn_player(peer_id)
+	
+	# もし自分がまだスポーンされていなければ自分もスポーン
+	var my_id = multiplayer.get_unique_id()
+	if not has_node(str(my_id)):
+		print("Spawning myself as well: ", my_id)
+		spawn_player(my_id)
+	
+	var player_count = 0
+	for child in get_children():
+		if child.name.is_valid_int():
+			player_count += 1
+	print("Total players after connection: ", player_count)
+	print("================================")
 
 func _on_player_disconnected(peer_id: int):
 	print("Player disconnected: ", peer_id)
@@ -33,10 +49,12 @@ func _on_player_disconnected(peer_id: int):
 		player_node.queue_free()
 
 func spawn_player(peer_id: int):
-	# 既存のプレイヤーをチェック
-	if has_node(str(peer_id)):
-		print("Player already exists: ", peer_id)
-		return
+	# 既存のプレイヤーをチェック（重複防止）
+	var existing_player = get_node_or_null(str(peer_id))
+	if existing_player:
+		print("Player already exists: ", peer_id, " - removing old one")
+		existing_player.queue_free()
+		await get_tree().process_frame  # 削除を待つ
 	
 	# プレイヤーを生成
 	var player = player_scene.instantiate()
@@ -62,17 +80,31 @@ func spawn_player(peer_id: int):
 func start_multiplayer_session():
 	print("TestLevel: start_multiplayer_session() started")
 	
-	# 自分のプレイヤーを必ず生成（サーバーでもクライアントでも）
+	# 自分のプレイヤーのみを生成
 	var my_id = multiplayer.get_unique_id()
 	print("TestLevel: spawn my player ID: ", my_id)
 	spawn_player(my_id)
 	
-	# サーバーの場合は既存のピアも生成
-	if multiplayer.is_server():
-		for peer_id in multiplayer.get_peers():
+	# 既に接続済みの他のプレイヤーをスポーン（サーバー・クライアント共通）
+	for peer_id in multiplayer.get_peers():
+		if peer_id != my_id:  # 自分以外
 			print("TestLevel: spawn existing peer player ID: ", peer_id)
 			spawn_player(peer_id)
-	else:
-		# クライアントの場合はサーバー（ID: 1）も生成
-		print("TestLevel: spawn server player ID: 1")
-		spawn_player(1)
+	
+	# 注意: 他のプレイヤーは_on_player_connected()で自動的にスポーンされる
+	
+	# 現在のプレイヤー状況を表示
+	print_player_status()
+
+func print_player_status():
+	print("=== CURRENT PLAYERS ===")
+	print("My ID: ", multiplayer.get_unique_id())
+	print("Connected peers: ", multiplayer.get_peers())
+	
+	var player_nodes = []
+	for child in get_children():
+		if child.name.is_valid_int():
+			player_nodes.append(child.name)
+	
+	print("Player nodes in scene: ", player_nodes)
+	print("========================")
