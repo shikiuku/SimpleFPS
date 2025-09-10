@@ -133,8 +133,6 @@ func _on_movement_touch(event: InputEvent):
 				print("=== JOYSTICK TOUCH STARTED ===")
 				print("Position: ", event.position, " ID: ", event.index)
 				print("Active touches: ", active_touch_ids)
-				# イベントを消費してViewAreaに伝わらないようにする
-				accept_event()
 			else:
 				print("=== JOYSTICK TOUCH BLOCKED ===")
 				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
@@ -150,8 +148,6 @@ func _on_movement_touch(event: InputEvent):
 		# ドラッグ中（自分のタッチIDのみ処理）
 		if active_touch_ids.get(event.index) == "joystick":
 			_update_joystick(event.position)
-			# イベントを消費してViewAreaに伝わらないようにする
-			accept_event()
 
 # 完全に新しいジョイスティック更新関数
 func _update_joystick(movement_area_touch_pos: Vector2):
