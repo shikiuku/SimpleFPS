@@ -206,32 +206,33 @@ func _on_view_touch(event: InputEvent):
 	elif event is InputEventScreenDrag and event.index == view_touch_id:
 		# 視点ドラッグ（自分のタッチIDのみ処理）
 		if active_touch_ids.get(event.index) == "view":
-			# ボタンが押されている時やジョイスティック使用中は感度を下げる
-			var base_sensitivity = 0.00035
+			# ジョイスティック使用中は視点操作を完全に無効化
+			if joystick_touch_id != -1:
+				print("=== VIEW INPUT BLOCKED - JOYSTICK ACTIVE ===")
+				return
+			
+			# ボタンが押されている時も視点操作を大幅に制限
+			var base_sensitivity = 0.00008  # 元の約1/4に大幅減少
 			var sensitivity_modifier = 1.0
 			
-			# ジョイスティックが使用中の場合は感度を下げる
-			if joystick_touch_id != -1:
-				sensitivity_modifier *= 0.5
-				
-			# ボタンが押されている時も感度を下げる
+			# ボタンが押されている時は更に感度を下げる
 			if is_any_button_pressed:
-				sensitivity_modifier *= 0.3
+				sensitivity_modifier *= 0.15  # 0.3 → 0.15 に更に制限
 			
 			var sensitivity = base_sensitivity * sensitivity_modifier
 			var delta = event.relative * sensitivity
 			
-			# 過度な動きを制限（視点がバグらないように）
-			var max_delta = 0.08
-			if joystick_touch_id != -1 or is_any_button_pressed:
-				max_delta = 0.03
+			# 過度な動きを更に厳しく制限
+			var max_delta = 0.02  # 0.08 → 0.02 に大幅制限
+			if is_any_button_pressed:
+				max_delta = 0.008  # ボタン押下中は更に制限
 			delta = delta.limit_length(max_delta)
 			
 			look_input.emit(delta)
-			print("=== LOOK INPUT EMITTED ===")
-			print("Look delta: ", delta, " ID: ", event.index)
-			print("Joystick active: ", joystick_touch_id != -1, " Button pressed: ", is_any_button_pressed)
-			print("Event position: ", event.position, " Relative: ", event.relative)
+			print("=== LOOK INPUT EMITTED (SAFE MODE) ===")
+			print("Look delta: ", delta, " Sensitivity: ", sensitivity)
+			print("Button pressed: ", is_any_button_pressed)
+			print("Event relative: ", event.relative)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
