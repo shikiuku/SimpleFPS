@@ -3,7 +3,7 @@ extends CharacterBody3D
 @export var walk_speed = 5.0
 @export var run_speed = 8.0
 @export var jump_velocity = 8.0
-@export var mouse_sensitivity = 0.002
+# @export var mouse_sensitivity = 0.002  # 視点操作機能削除
 
 # 同期用プロパティ（RPC同期で使用）
 @export var sync_position := Vector3.ZERO
@@ -71,14 +71,14 @@ func setup_mobile_ui():
 	
 	# シグナルを接続
 	mobile_ui.move_input.connect(_on_mobile_move_input)
-	mobile_ui.look_input.connect(_on_mobile_look_input)
+	mobile_ui.look_input.connect(_on_mobile_look_input)  # 視点操作機能を再実装
 	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
 	mobile_ui.jump_pressed.connect(_on_mobile_jump)
 	
 	print("Mobile UI setup complete!")
 	print("Mobile UI signals connected:")
 	print("  - move_input: ", mobile_ui.move_input.is_connected(_on_mobile_move_input))
-	print("  - look_input: ", mobile_ui.look_input.is_connected(_on_mobile_look_input))
+	print("  - look_input: ", mobile_ui.look_input.is_connected(_on_mobile_look_input))  # 視点操作機能を再実装
 	print("  - shoot_pressed: ", mobile_ui.shoot_pressed.is_connected(_on_mobile_shoot))
 	print("  - jump_pressed: ", mobile_ui.jump_pressed.is_connected(_on_mobile_jump))
 
@@ -94,12 +94,15 @@ func _on_mobile_move_input(direction: Vector2):
 	mobile_movement = direction
 	print("Mobile move input: ", direction)
 
+# 視点操作機能を再実装
 func _on_mobile_look_input(delta: Vector2):
 	if is_multiplayer_authority():
-		# マウス操作と同じロジック
+		print("Mobile look input: ", delta)
+		# モバイル操作での視点変更
 		rotate_y(-delta.x)
 		camera.rotate_x(-delta.y)
 		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
+		print("Camera rotation updated - Y: ", rotation.y, " X: ", camera.rotation.x)
 
 func _on_mobile_shoot():
 	if is_multiplayer_authority():
@@ -119,18 +122,19 @@ func _input(event):
 	if not is_multiplayer_authority():
 		return
 	
-	# マウス操作（PCとタッチ両対応）
-	if event is InputEventMouseMotion:
-		# マウスでカメラ回転
-		rotate_y(-event.relative.x * mouse_sensitivity)
-		camera.rotate_x(-event.relative.y * mouse_sensitivity)
-		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
+	# 視点操作機能削除 - マウスによる視点変更は無効化
+	# if event is InputEventMouseMotion:
+	# 	# マウスでカメラ回転
+	# 	rotate_y(-event.relative.x * mouse_sensitivity)
+	# 	camera.rotate_x(-event.relative.y * mouse_sensitivity)
+	# 	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
 	
-	if event.is_action_pressed("mouseMode"):
-		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		else:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	# マウスモード切り替えも削除（視点操作機能削除）
+	# if event.is_action_pressed("mouseMode"):
+	# 	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+	# 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# 	else:
+	# 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
 	# タッチイベントはMobileUIに任せる（処理済みにはしない）
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:

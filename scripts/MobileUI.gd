@@ -1,12 +1,12 @@
 extends CanvasLayer
 
 signal move_input(direction: Vector2)
-# signal look_input(delta: Vector2)  # 視点操作信号を完全に無効化
+signal look_input(delta: Vector2)  # 視点操作信号を再実装
 signal shoot_pressed
 signal jump_pressed
 
 @onready var movement_area = $MovementArea
-@onready var view_area = $ViewArea
+@onready var view_area = $ViewArea  # 視点操作エリアを再実装
 @onready var joystick_visual = $JoystickVisual
 @onready var shoot_button = $ButtonLayer/ShootButton
 @onready var jump_button = $ButtonLayer/JumpButton
@@ -17,7 +17,7 @@ signal jump_pressed
 
 # タッチ管理
 var joystick_touch_id = -1
-# var view_touch_id = -1  # 視点操作用タッチID削除
+var view_touch_id = -1  # 視点操作用タッチIDを再実装
 var active_touch_ids = {}  # アクティブなタッチを追跡
 
 # ジョイスティック設定（新版）
@@ -25,6 +25,9 @@ var joystick_center = Vector2.ZERO
 var joystick_radius = 50.0
 var joystick_dead_zone = 8.0
 var joystick_knob_size = Vector2(30, 30)  # ノブのサイズ
+
+# 視点操作設定
+var look_sensitivity = 0.003  # 視点操作の感度
 
 func _ready():
 	print("=== MobileUI INITIALIZATION ===")
@@ -65,10 +68,17 @@ func _ready():
 		print("Movement area z_index: ", movement_area.z_index)
 	else:
 		print("ERROR: movement_area is null!")
-	# 視点操作エリアの接続を完全に無効化
-	# if view_area:
-	# 	view_area.gui_input.connect(_on_view_touch)
-	# 	print("View area connected")
+	# 視点操作エリアの接続を再実装
+	if view_area:
+		view_area.gui_input.connect(_on_view_touch)
+		print("View area connected")
+		print("View area position: ", view_area.position)
+		print("View area size: ", view_area.size)
+		print("View area global position: ", view_area.global_position)
+		print("View area visible: ", view_area.visible)
+		print("View area z_index: ", view_area.z_index)
+	else:
+		print("ERROR: view_area is null!")
 	
 	print("MobileUI setup complete!")
 
@@ -76,7 +86,7 @@ func _ready():
 func _cleanup_all_touches():
 	print("=== CLEANUP ALL TOUCHES ===")
 	joystick_touch_id = -1
-	# view_touch_id = -1  # 視点操作用タッチID削除
+	view_touch_id = -1  # 視点操作用タッチIDもリセット
 	active_touch_ids.clear()
 	_reset_joystick_knob()
 	move_input.emit(Vector2.ZERO)
@@ -199,9 +209,58 @@ func _update_joystick(movement_area_touch_pos: Vector2):
 		move_input.emit(Vector2.ZERO)
 		print("=== MOVE INPUT ZERO (dead zone) ===")
 
-# 視点操作機能を完全に削除
-# func _on_view_touch(event: InputEvent):
-# 	pass
+# 視点操作機能を再実装
+func _on_view_touch(event: InputEvent):
+	print("=== VIEW TOUCH EVENT RECEIVED ===")
+	print("Event type: ", event.get_class())
+	print("Event: ", event)
+	
+	if event is InputEventScreenTouch:
+		if event.pressed and view_touch_id == -1:
+			# 他の操作と競合していないかチェック
+			if not active_touch_ids.has(event.index):
+				# 視点操作開始
+				view_touch_id = event.index
+				active_touch_ids[event.index] = "view_control"
+				print("=== VIEW TOUCH STARTED ===")
+				print("Position: ", event.position, " ID: ", event.index)
+			else:
+				print("=== VIEW TOUCH BLOCKED ===")
+				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
+		elif not event.pressed and event.index == view_touch_id:
+			# タッチ終了
+			view_touch_id = -1
+			active_touch_ids.erase(event.index)
+			print("View touch ended ID: ", event.index)
+	
+	elif event is InputEventScreenDrag and event.index == view_touch_id:
+		# ドラッグ中（自分のタッチIDのみ処理）
+		if active_touch_ids.get(event.index) == "view_control":
+			var delta = event.relative * look_sensitivity
+			look_input.emit(delta)
+			print("=== LOOK INPUT EMITTED ===")
+			print("Relative: ", event.relative, " Delta: ", delta)
+	
+	# PC環境でのマウス操作サポート
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		if event.pressed and view_touch_id == -1:
+			# マウスでの視点操作開始（PC環境用・右クリック）
+			view_touch_id = 1  # マウス用の固定ID（右クリック用）
+			active_touch_ids[1] = "view_control_mouse"
+			print("=== VIEW MOUSE STARTED ===")
+			print("Position: ", event.position)
+		elif not event.pressed and view_touch_id == 1:
+			# マウスでの視点操作終了
+			view_touch_id = -1
+			active_touch_ids.erase(1)
+			print("View mouse ended")
+	
+	elif event is InputEventMouseMotion and view_touch_id == 1:
+		# マウスでのドラッグ中（PC環境用・右クリック中）
+		if event.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+			var delta = event.relative * look_sensitivity
+			look_input.emit(delta)
+			print("View mouse drag: ", event.relative, " Delta: ", delta)
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
