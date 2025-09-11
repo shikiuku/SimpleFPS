@@ -1,0 +1,65 @@
+[gd_scene load_steps=4 format=3 uid="uid://test_simple_mobile"]
+
+[ext_resource type="Script" path="res://scripts/SimpleMobileUI.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_base"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 50
+corner_radius_top_right = 50
+corner_radius_bottom_right = 50
+corner_radius_bottom_left = 50
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_knob"]
+bg_color = Color(1, 1, 1, 0.6)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[node name="TestSimpleMobileUI" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="JoystickVisual" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+visible = false
+
+[node name="JoystickBase" type="Panel" parent="JoystickVisual"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_base")
+
+[node name="JoystickKnob" type="Panel" parent="JoystickVisual/JoystickBase"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -15.0
+offset_top = -15.0
+offset_right = 15.0
+offset_bottom = 15.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_knob")
+
+[node name="DebugLabel" type="Label" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -100.0
+offset_right = 400.0
+offset_bottom = -10.0
+text = "シンプルモバイルUI テスト
+左50% = ジョイスティック (1本指のみ)
+右50% = 視点移動 (1本指のみ)"

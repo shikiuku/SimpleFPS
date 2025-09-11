@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://cbexfgmqjqgd"]
+
+[ext_resource type="Script" path="res://scripts/SimpleMobileUI.gd" id="1"]
+
+[node name="SimpleMobileUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="JoystickVisual" type="Control" parent="."]
+layout_mode = 0
+visible = false
+
+[node name="Base" type="ColorRect" parent="JoystickVisual"]
+layout_mode = 0
+offset_right = 120.0
+offset_bottom = 120.0
+color = Color(0.2, 0.2, 0.2, 0.5)
+
+[node name="Knob" type="ColorRect" parent="JoystickVisual"]
+layout_mode = 0
+offset_right = 60.0
+offset_bottom = 60.0
+color = Color(0.6, 0.6, 0.6, 0.8)

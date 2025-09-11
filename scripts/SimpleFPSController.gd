@@ -72,23 +72,19 @@ func setup_multiplayer():
 func setup_mobile_ui():
 	print("Setting up mobile UI (always enabled)...")
 	
-	# モバイルUI を読み込み
-	var mobile_ui_scene = preload("res://scenes/MobileUI.tscn")
+	# シンプルモバイルUI を読み込み（ボタンなし版）
+	var mobile_ui_scene = preload("res://scenes/TestSimpleMobileUI.tscn")
 	mobile_ui = mobile_ui_scene.instantiate()
 	get_tree().current_scene.add_child(mobile_ui)
 	
-	# シグナルを接続
+	# シグナルを接続（シンプルUI版 - ジョイスティックと視点のみ）
 	mobile_ui.move_input.connect(_on_mobile_move_input)
-	mobile_ui.look_input.connect(_on_mobile_look_input)  # 視点操作機能を再実装
-	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
-	mobile_ui.jump_pressed.connect(_on_mobile_jump)
+	mobile_ui.view_input.connect(_on_mobile_view_input)
 	
-	print("Mobile UI setup complete!")
-	print("Mobile UI signals connected:")
+	print("Simple Mobile UI setup complete!")
+	print("Simple Mobile UI signals connected:")
 	print("  - move_input: ", mobile_ui.move_input.is_connected(_on_mobile_move_input))
-	print("  - look_input: ", mobile_ui.look_input.is_connected(_on_mobile_look_input))  # 視点操作機能を再実装
-	print("  - shoot_pressed: ", mobile_ui.shoot_pressed.is_connected(_on_mobile_shoot))
-	print("  - jump_pressed: ", mobile_ui.jump_pressed.is_connected(_on_mobile_jump))
+	print("  - view_input: ", mobile_ui.view_input.is_connected(_on_mobile_view_input))
 
 func setup_game_ui():
 	# GameUIを読み込み（全プレイヤーで共有、1回だけ作成）
@@ -102,7 +98,25 @@ func _on_mobile_move_input(direction: Vector2):
 	mobile_movement = direction
 	print("Mobile move input: ", direction)
 
-# 視点操作機能を再実装（絶対値管理版）
+# シンプルUI用の視点操作処理
+func _on_mobile_view_input(delta: Vector2):
+	if is_multiplayer_authority():
+		print("Mobile view input: ", delta)
+		
+		# 絶対値で回転を管理（飛ばされる問題を根本解決）
+		current_y_rotation -= delta.x * 0.002  # 感度調整
+		current_x_rotation -= delta.y * 0.002
+		
+		# 垂直回転は-90度から90度に制限
+		current_x_rotation = clamp(current_x_rotation, deg_to_rad(-90), deg_to_rad(90))
+		
+		# 実際の回転を適用
+		rotation.y = current_y_rotation
+		camera.rotation.x = current_x_rotation
+		
+		print("Camera rotation set - Y: ", current_y_rotation, " X: ", current_x_rotation)
+
+# 旧版視点操作機能（後方互換性のため残す）
 func _on_mobile_look_input(delta: Vector2):
 	if is_multiplayer_authority():
 		print("Mobile look input: ", delta)
