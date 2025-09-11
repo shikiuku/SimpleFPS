@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" fill="#363d52"/>
-  <rect x="32" y="32" width="64" height="64" fill="#4285f4"/>
-  <text x="64" y="72" text-anchor="middle" fill="white" font-size="20" font-family="Arial">FPS</text>
-</svg>
