@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 signal move_input(direction: Vector2)
-signal look_input(delta: Vector2)
+# signal look_input(delta: Vector2)  # 視点操作信号を完全に無効化
 signal shoot_pressed
 signal jump_pressed
 
@@ -17,9 +17,8 @@ signal jump_pressed
 
 # タッチ管理
 var joystick_touch_id = -1
-var view_touch_id = -1
+# var view_touch_id = -1  # 視点操作用タッチID削除
 var active_touch_ids = {}  # アクティブなタッチを追跡
-var is_any_button_pressed = false  # いずれかのボタンが押されているか
 
 # ジョイスティック設定（新版）
 var joystick_center = Vector2.ZERO
@@ -66,22 +65,19 @@ func _ready():
 		print("Movement area z_index: ", movement_area.z_index)
 	else:
 		print("ERROR: movement_area is null!")
-	if view_area:
-		view_area.gui_input.connect(_on_view_touch)
-		print("View area connected")
+	# 視点操作エリアの接続を完全に無効化
+	# if view_area:
+	# 	view_area.gui_input.connect(_on_view_touch)
+	# 	print("View area connected")
 	
 	print("MobileUI setup complete!")
 
-# 全てのタッチ状態をクリーンアップ
+# 全てのタッチ状態をクリーンアップ（シンプル版）
 func _cleanup_all_touches():
 	print("=== CLEANUP ALL TOUCHES ===")
-	print("Previous active touch IDs: ", active_touch_ids)
 	joystick_touch_id = -1
-	view_touch_id = -1
+	# view_touch_id = -1  # 視点操作用タッチID削除
 	active_touch_ids.clear()
-	is_any_button_pressed = false
-	shoot_button_pressed = false
-	jump_button_pressed = false
 	_reset_joystick_knob()
 	move_input.emit(Vector2.ZERO)
 	print("All touch states cleaned")
@@ -100,31 +96,7 @@ func _reset_joystick_knob():
 		joystick_knob.position = base_center - knob_half_size
 		print("Joystick knob reset to center: ", joystick_knob.position)
 
-# 改善されたジョイスティックエリア判定
-func _is_position_in_joystick_area(view_area_touch_pos: Vector2) -> bool:
-	if not joystick_base or not view_area:
-		return false
-	
-	# ViewAreaのローカル座標をグローバル座標に変換
-	var view_area_global = view_area.global_position + view_area_touch_pos
-	
-	# ジョイスティックのグローバル位置と範囲を取得
-	var joystick_global_pos = joystick_base.global_position
-	var joystick_size = joystick_base.size
-	var joystick_rect = Rect2(joystick_global_pos, joystick_size)
-	
-	# 確実な分離のため大きなマージンを追加（スマートフォンの指の太さを考慮）
-	joystick_rect = joystick_rect.grow(60)  # 30 → 60 に拡大
-	
-	var is_in_area = joystick_rect.has_point(view_area_global)
-	if is_in_area:
-		print("=== JOYSTICK AREA CONFLICT DETECTED ===")
-		print("View touch pos: ", view_area_touch_pos)
-		print("View global: ", view_area_global)
-		print("Joystick rect (with margin): ", joystick_rect)
-		print("Original joystick rect: ", Rect2(joystick_global_pos, joystick_size))
-	
-	return is_in_area
+# ジョイスティックエリア判定機能を削除（干渉防止機能無効化）
 
 func _on_movement_touch(event: InputEvent):
 	print("=== MOVEMENT TOUCH EVENT RECEIVED ===")
@@ -139,21 +111,12 @@ func _on_movement_touch(event: InputEvent):
 		if event.pressed and joystick_touch_id == -1:
 			# 他の操作と競合していないかチェック
 			if not active_touch_ids.has(event.index):
-				# タッチ開始 - 視点操作が進行中の場合は穏やかに終了
-				if view_touch_id != -1:
-					print("=== GENTLY ENDING VIEW TOUCH - JOYSTICK STARTING ===")
-					# 視点操作を段階的に終了
-					active_touch_ids.erase(view_touch_id)
-					view_touch_id = -1
-					# 少し待機してからジョイスティックを開始
-					await get_tree().process_frame
-				
+				# ジョイスティック開始（シンプル版）
 				joystick_touch_id = event.index
 				active_touch_ids[event.index] = "joystick"
 				_update_joystick(event.position)
 				print("=== JOYSTICK TOUCH STARTED ===")
 				print("Position: ", event.position, " ID: ", event.index)
-				print("Active touches: ", active_touch_ids)
 			else:
 				print("=== JOYSTICK TOUCH BLOCKED ===")
 				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
@@ -173,15 +136,7 @@ func _on_movement_touch(event: InputEvent):
 	# PC環境でのマウス操作サポート
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and joystick_touch_id == -1:
-			# 視点操作が進行中の場合は穏やかに終了
-			if view_touch_id != -1:
-				print("=== GENTLY ENDING VIEW TOUCH - JOYSTICK MOUSE STARTING ===")
-				active_touch_ids.erase(view_touch_id)
-				view_touch_id = -1
-				# 少し待機してからジョイスティックを開始
-				await get_tree().process_frame
-			
-			# マウスでのジョイスティック開始（PC環境用）
+			# マウスでのジョイスティック開始（PC環境用・シンプル版）
 			joystick_touch_id = 0  # マウス用の固定ID
 			active_touch_ids[0] = "joystick_mouse"
 			_update_joystick(event.position)
@@ -244,70 +199,9 @@ func _update_joystick(movement_area_touch_pos: Vector2):
 		move_input.emit(Vector2.ZERO)
 		print("=== MOVE INPUT ZERO (dead zone) ===")
 
-func _on_view_touch(event: InputEvent):
-	# ジョイスティックが使用中の場合は全てのViewAreaイベントを完全に無視
-	if joystick_touch_id != -1:
-		print("=== VIEW AREA EVENT BLOCKED - JOYSTICK ACTIVE (ID:", joystick_touch_id, ") ===")
-		get_viewport().set_input_as_handled()
-		return
-	
-	if event is InputEventScreenTouch:
-		if event.pressed and view_touch_id == -1:
-			# 他の操作と競合していないかチェック
-			if not active_touch_ids.has(event.index):
-				# ジョイスティックエリア内の場合は視点操作を開始しない（より厳密な判定）
-				if _is_position_in_joystick_area(event.position):
-					print("=== VIEW TOUCH IGNORED - IN JOYSTICK AREA ===")
-					print("Position: ", event.position)
-					get_viewport().set_input_as_handled()
-					return
-				
-				# 再度ジョイスティック状態を確認（競合状態対策）
-				if joystick_touch_id != -1:
-					print("=== VIEW TOUCH BLOCKED - JOYSTICK BECAME ACTIVE ===")
-					get_viewport().set_input_as_handled()
-					return
-				
-				# 視点操作開始
-				view_touch_id = event.index
-				active_touch_ids[event.index] = "view"
-				print("=== VIEW TOUCH STARTED ===")
-				print("Position: ", event.position, " ID: ", event.index)
-				print("Active touches: ", active_touch_ids)
-			else:
-				print("=== VIEW TOUCH BLOCKED ===")
-				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
-				get_viewport().set_input_as_handled()
-		elif not event.pressed and event.index == view_touch_id:
-			# 視点操作終了
-			view_touch_id = -1
-			active_touch_ids.erase(event.index)
-			print("View touch ended ID: ", event.index)
-	
-	elif event is InputEventScreenDrag and event.index == view_touch_id:
-		# 視点ドラッグ（自分のタッチIDのみ処理）
-		if active_touch_ids.get(event.index) == "view":
-			# ジョイスティック使用中は視点操作を完全に無効化（最優先チェック）
-			if joystick_touch_id != -1:
-				print("=== VIEW DRAG BLOCKED - JOYSTICK ACTIVE (ID:", joystick_touch_id, ") ===")
-				# 視点操作を強制終了
-				view_touch_id = -1
-				active_touch_ids.erase(event.index)
-				get_viewport().set_input_as_handled()
-				return
-			
-			# 通常の視点操作（ボタンによる感度変更を削除）
-			var base_sensitivity = 0.0003  # 通常の感度に戻す
-			var delta = event.relative * base_sensitivity
-			
-			# 過度な動きを制限（緩和）
-			var max_delta = 0.05  # より自然な動きを許可
-			delta = delta.limit_length(max_delta)
-			
-			look_input.emit(delta)
-			print("=== LOOK INPUT EMITTED (NORMAL MODE) ===")
-			print("Look delta: ", delta, " Sensitivity: ", base_sensitivity)
-			print("Event relative: ", event.relative)
+# 視点操作機能を完全に削除
+# func _on_view_touch(event: InputEvent):
+# 	pass
 
 func _on_shoot_pressed():
 	print("SHOOT BUTTON PRESSED!")
