@@ -53,10 +53,10 @@ func _input(event):
 
 func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 	if is_left_side:
-		# **左側 = ジョイスティック（1本のみ）**
+		# **左側 = ジョイスティック（1本のみ） - 強制的に既存タッチを削除**
 		if _has_joystick_touch():
-			print("JOYSTICK REJECTED: Already active")
-			return
+			print("JOYSTICK: Forcing removal of existing touch")
+			_force_remove_joystick_touches()
 		
 		active_touches[touch_id] = {
 			"type": "joystick",
@@ -66,16 +66,16 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 		print("JOYSTICK START: ID=", touch_id)
 		
 	else:
-		# **右側 = 視点（1本のみ）**
+		# **右側 = 視点（1本のみ） - 強制的に既存タッチを削除**
 		if _has_view_touch():
-			print("VIEW REJECTED: Already active")
-			return
+			print("VIEW: Forcing removal of existing touch")
+			_force_remove_view_touches()
 		
 		active_touches[touch_id] = {
 			"type": "view",
 			"last_pos": pos
 		}
-		print("VIEW START: ID=", touch_id, " (SINGLE FINGER ONLY)")
+		print("VIEW START: ID=", touch_id, " (SINGLE FINGER ENFORCED)")
 
 func _handle_touch_end(touch_id: int):
 	if touch_id not in active_touches:
@@ -154,6 +154,30 @@ func _has_view_touch() -> bool:
 		if active_touches[touch_id].type == "view":
 			return true
 	return false
+
+# **強制削除関数**
+func _force_remove_joystick_touches():
+	var to_remove = []
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "joystick":
+			to_remove.append(touch_id)
+	
+	for touch_id in to_remove:
+		print("FORCE REMOVE JOYSTICK: ID=", touch_id)
+		active_touches.erase(touch_id)
+	
+	_hide_joystick()
+	move_input.emit(Vector2.ZERO)
+
+func _force_remove_view_touches():
+	var to_remove = []
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "view":
+			to_remove.append(touch_id)
+	
+	for touch_id in to_remove:
+		print("FORCE REMOVE VIEW: ID=", touch_id)
+		active_touches.erase(touch_id)
 
 # **緊急リセット**
 func _notification(what):
