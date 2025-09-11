@@ -81,8 +81,16 @@ func _ready():
 		print("ERROR: view_area is null!")
 	
 	print("MobileUI setup complete!")
+	
+	# 定期的な競合チェック用タイマーを追加
+	var conflict_check_timer = Timer.new()
+	conflict_check_timer.wait_time = 0.5  # 0.5秒ごとにチェック
+	conflict_check_timer.timeout.connect(_resolve_touch_conflicts)
+	conflict_check_timer.autostart = true
+	add_child(conflict_check_timer)
+	print("Touch conflict resolution timer started")
 
-# 全てのタッチ状態をクリーンアップ（シンプル版）
+# 全てのタッチ状態をクリーンアップ（強化版）
 func _cleanup_all_touches():
 	print("=== CLEANUP ALL TOUCHES ===")
 	joystick_touch_id = -1
@@ -92,9 +100,43 @@ func _cleanup_all_touches():
 	move_input.emit(Vector2.ZERO)
 	print("All touch states cleaned")
 
-# フォーカス失った時のクリーンアップ
+# 緊急時の競合解決機能（新規追加）
+func _resolve_touch_conflicts():
+	print("=== RESOLVING TOUCH CONFLICTS ===")
+	
+	# アクティブなタッチIDが3個以上なら強制クリーンアップ
+	if active_touch_ids.size() >= 3:
+		print("Too many active touches (", active_touch_ids.size(), ") - force cleanup")
+		_cleanup_all_touches()
+		return
+	
+	# 視点操作とジョイスティックが同じIDを使っているなら修正
+	if view_touch_id != -1 and joystick_touch_id != -1 and view_touch_id == joystick_touch_id:
+		print("CONFLICT: Same touch ID for view and joystick - resetting both")
+		_cleanup_all_touches()
+		return
+	
+	# 無効なタッチIDをクリーンアップ
+	var ids_to_remove = []
+	for touch_id in active_touch_ids.keys():
+		if touch_id != view_touch_id and touch_id != joystick_touch_id:
+			# ボタンのタッチでない場合は削除対象
+			var touch_type = active_touch_ids.get(touch_id)
+			if touch_type != "shoot_button" and touch_type != "jump_button":
+				ids_to_remove.append(touch_id)
+	
+	for id in ids_to_remove:
+		active_touch_ids.erase(id)
+		print("Cleaned up orphaned touch ID: ", id)
+
+# フォーカス失った時のクリーンアップ（強化版）
 func _notification(what):
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		print("=== APP FOCUS LOST - EMERGENCY CLEANUP ===")
+		_cleanup_all_touches()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		print("=== APP FOCUS REGAINED - RESET TOUCH STATE ===")
+		# フォーカス復帰時も安全のためクリーンアップ
 		_cleanup_all_touches()
 
 # 新しいジョイスティックノブリセット関数
@@ -130,18 +172,31 @@ func _on_movement_touch(event: InputEvent):
 			else:
 				print("=== JOYSTICK TOUCH BLOCKED ===")
 				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
-		elif not event.pressed and event.index == joystick_touch_id:
-			# タッチ終了
-			joystick_touch_id = -1
-			active_touch_ids.erase(event.index)
-			_reset_joystick_knob()
-			move_input.emit(Vector2.ZERO)
-			print("Joystick touch ended ID: ", event.index)
+		elif not event.pressed:
+			# タッチ終了 - 重要：自分のタッチIDの場合のみ処理
+			if event.index == joystick_touch_id:
+				joystick_touch_id = -1
+				active_touch_ids.erase(event.index)
+				_reset_joystick_knob()
+				move_input.emit(Vector2.ZERO)
+				print("Joystick touch ended ID: ", event.index)
+			else:
+				# 他の指が離れた場合は無視（重要：ジョイスティック操作を継続）
+				print("=== OTHER JOYSTICK TOUCH ENDED (IGNORED) ===")
+				print("Ended ID: ", event.index, " Active joystick ID: ", joystick_touch_id)
+				# 他の指のタッチIDも削除しておく（クリーンアップ）
+				if active_touch_ids.has(event.index):
+					active_touch_ids.erase(event.index)
+					print("Cleaned up inactive joystick touch ID: ", event.index)
 	
-	elif event is InputEventScreenDrag and event.index == joystick_touch_id:
-		# ドラッグ中（自分のタッチIDのみ処理）
-		if active_touch_ids.get(event.index) == "joystick":
+	elif event is InputEventScreenDrag:
+		# ドラッグ中 - 厳密に自分のタッチIDのみ処理
+		if event.index == joystick_touch_id and active_touch_ids.get(event.index) == "joystick":
 			_update_joystick(event.position)
+		else:
+			# 他の指のドラッグは完全に無視
+			print("=== OTHER JOYSTICK DRAG IGNORED ===")
+			print("Drag ID: ", event.index, " Active joystick ID: ", joystick_touch_id)
 	
 	# PC環境でのマウス操作サポート
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -227,19 +282,32 @@ func _on_view_touch(event: InputEvent):
 			else:
 				print("=== VIEW TOUCH BLOCKED ===")
 				print("Touch ID ", event.index, " already used by: ", active_touch_ids.get(event.index))
-		elif not event.pressed and event.index == view_touch_id:
-			# タッチ終了
-			view_touch_id = -1
-			active_touch_ids.erase(event.index)
-			print("View touch ended ID: ", event.index)
+		elif not event.pressed:
+			# タッチ終了 - 重要：自分のタッチIDの場合のみ処理
+			if event.index == view_touch_id:
+				view_touch_id = -1
+				active_touch_ids.erase(event.index)
+				print("View touch ended ID: ", event.index)
+			else:
+				# 他の指が離れた場合は無視（重要：視点操作を継続）
+				print("=== OTHER TOUCH ENDED (IGNORED) ===")
+				print("Ended ID: ", event.index, " Active view ID: ", view_touch_id)
+				# 他の指のタッチIDも削除しておく（クリーンアップ）
+				if active_touch_ids.has(event.index):
+					active_touch_ids.erase(event.index)
+					print("Cleaned up inactive touch ID: ", event.index)
 	
-	elif event is InputEventScreenDrag and event.index == view_touch_id:
-		# ドラッグ中（自分のタッチIDのみ処理）
-		if active_touch_ids.get(event.index) == "view_control":
+	elif event is InputEventScreenDrag:
+		# ドラッグ中 - 厳密に自分のタッチIDのみ処理
+		if event.index == view_touch_id and active_touch_ids.get(event.index) == "view_control":
 			var delta = event.relative * look_sensitivity
 			look_input.emit(delta)
 			print("=== LOOK INPUT EMITTED ===")
 			print("Relative: ", event.relative, " Delta: ", delta)
+		else:
+			# 他の指のドラッグは完全に無視
+			print("=== OTHER DRAG IGNORED ===")
+			print("Drag ID: ", event.index, " Active view ID: ", view_touch_id)
 	
 	# PC環境でのマウス操作サポート
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
