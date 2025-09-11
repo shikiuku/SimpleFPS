@@ -13,12 +13,10 @@ signal jump_pressed
 @onready var joystick_base = $JoystickVisual/JoystickBase
 @onready var joystick_knob = $JoystickVisual/JoystickBase/JoystickKnob
 
-# **プロ仕様：厳密な領域分離システム**
-var joystick_touch_id = -1  # 左領域専用
-var view_touch_id = -1      # 右領域専用
+# **正しいマルチタッチ管理**
+var active_touches = {}  # touch_id -> {"type": "joystick"/"view", "data": {...}}
 
 # ジョイスティック設定
-var joystick_center = Vector2.ZERO
 var joystick_radius = 50.0
 var joystick_dead_zone = 8.0
 var joystick_knob_size = Vector2(30, 30)
@@ -27,108 +25,133 @@ var joystick_knob_size = Vector2(30, 30)
 var look_sensitivity = 0.003
 
 func _ready():
-	print("=== MobileUI PRO ZONE SYSTEM INITIALIZED ===")
+	print("=== MobileUI CORRECT MULTITOUCH SYSTEM ===")
 	
-	# ボタン接続（シンプル）
+	# ボタン接続
 	if shoot_button:
 		shoot_button.pressed.connect(_on_shoot_pressed)
 	if jump_button:
 		jump_button.pressed.connect(_on_jump_pressed)
 	
 	# ジョイスティック初期化
-	if joystick_base and joystick_knob:
+	if joystick_visual:
 		joystick_visual.visible = false
-		_reset_joystick_knob()
+		if joystick_knob and joystick_base:
+			_reset_joystick_knob()
 	
-	print("Pro zone system ready!")
+	print("Correct multitouch system ready!")
 
-# **メインタッチハンドラー：完全統一管理**
+# **正しいマルチタッチ処理**
 func _input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
 	
-	# **即座にイベント消費** - 最優先
-	get_viewport().set_input_as_handled()
-	
 	var screen_size = get_viewport().get_visible_rect().size
 	var touch_pos = event.position
+	var touch_id = event.index
 	
-	# **厳密な画面分割**
-	var is_left_zone = touch_pos.x < screen_size.x * 0.5   # 左50%：移動専用
-	var is_right_zone = touch_pos.x >= screen_size.x * 0.5  # 右50%：視点専用
+	# 画面分割
+	var is_left_zone = touch_pos.x < screen_size.x * 0.5
+	var is_right_zone = touch_pos.x >= screen_size.x * 0.5
 	
-	# **タッチ開始処理**
+	print("Touch event: ID=", touch_id, " Pos=", touch_pos, " Left=", is_left_zone)
+	
+	# **タッチ開始**
 	if event is InputEventScreenTouch and event.pressed:
-		print("=== UNIFIED TOUCH START ===")
-		print("ID: ", event.index, " Pos: ", touch_pos, " Left: ", is_left_zone, " Right: ", is_right_zone)
-		
-		# ボタン領域チェック（右下領域）
-		if _is_button_area(touch_pos, screen_size):
-			print("BUTTON AREA: Touch in button zone")
-			_handle_button_touch(touch_pos)
-			return
-		
-		# 左領域：移動ジョイスティック専用
-		if is_left_zone and joystick_touch_id == -1:
-			joystick_touch_id = event.index
-			joystick_center = touch_pos
-			_show_joystick_at_position(touch_pos)
-			print("JOYSTICK ZONE: Started ID ", event.index)
-		
-		# 右領域：視点操作専用（ボタン領域除く）
-		elif is_right_zone and view_touch_id == -1:
-			view_touch_id = event.index
-			print("VIEW ZONE: Started ID ", event.index)
-		
-		else:
-			print("ZONE BLOCKED: Left occupied=", joystick_touch_id != -1, " Right occupied=", view_touch_id != -1)
+		_handle_touch_start(touch_id, touch_pos, is_left_zone, is_right_zone, screen_size)
 	
-	# **タッチ終了処理**
+	# **タッチ終了**
 	elif event is InputEventScreenTouch and not event.pressed:
-		print("=== UNIFIED TOUCH END ===")
+		_handle_touch_end(touch_id)
+	
+	# **ドラッグ**
+	elif event is InputEventScreenDrag:
+		_handle_touch_drag(touch_id, event.position, event.relative)
+
+func _handle_touch_start(touch_id: int, pos: Vector2, is_left: bool, is_right: bool, screen_size: Vector2):
+	# ボタン領域チェック（優先）
+	if _is_button_area(pos, screen_size):
+		_handle_button_touch(pos)
+		get_viewport().set_input_as_handled()  # ボタン処理は消費
+		return
+	
+	# 左領域：ジョイスティック
+	if is_left and not _has_joystick_touch():
+		active_touches[touch_id] = {
+			"type": "joystick",
+			"center": pos,
+			"start_pos": pos
+		}
+		_show_joystick_at_position(pos)
+		print("JOYSTICK: Started ID ", touch_id, " at ", pos)
+		get_viewport().set_input_as_handled()
+	
+	# 右領域：視点操作
+	elif is_right and not _has_view_touch():
+		active_touches[touch_id] = {
+			"type": "view",
+			"last_pos": pos
+		}
+		print("VIEW: Started ID ", touch_id, " at ", pos)
+		get_viewport().set_input_as_handled()
+	
+	else:
+		print("IGNORED: Touch rejected - Left busy=", _has_joystick_touch(), " Right busy=", _has_view_touch())
+
+func _handle_touch_end(touch_id: int):
+	if touch_id in active_touches:
+		var touch_data = active_touches[touch_id]
 		
-		# 自分の担当領域かチェック
-		if event.index == joystick_touch_id:
-			joystick_touch_id = -1
+		if touch_data.type == "joystick":
 			_hide_joystick()
 			move_input.emit(Vector2.ZERO)
-			print("JOYSTICK ZONE: Ended ID ", event.index)
-		elif event.index == view_touch_id:
-			view_touch_id = -1
-			print("VIEW ZONE: Ended ID ", event.index)
-		else:
-			print("IGNORED: Unknown touch end ID ", event.index)
+			print("JOYSTICK: Ended ID ", touch_id)
+		
+		elif touch_data.type == "view":
+			print("VIEW: Ended ID ", touch_id)
+		
+		active_touches.erase(touch_id)
+		get_viewport().set_input_as_handled()
+	else:
+		print("IGNORED: Unknown touch end ID ", touch_id)
+
+func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
+	if touch_id not in active_touches:
+		return
 	
-	# **ドラッグ処理**
-	elif event is InputEventScreenDrag:
-		var current_is_left = event.position.x < screen_size.x * 0.5
-		var current_is_right = event.position.x >= screen_size.x * 0.5
-		
-		# ジョイスティックドラッグ（左領域内の自分のタッチのみ）
-		if event.index == joystick_touch_id and current_is_left:
-			_handle_joystick_drag(event.position)
-		
-		# 視点操作ドラッグ（右領域内の自分のタッチのみ）
-		elif event.index == view_touch_id and current_is_right:
-			_handle_view_drag(event.relative)
-		
-		else:
-			# 領域違反や無効なドラッグは完全無視
-			print("ZONE VIOLATION: Ignored drag ID ", event.index)
+	var touch_data = active_touches[touch_id]
+	
+	if touch_data.type == "joystick":
+		_handle_joystick_drag(pos, touch_data.center)
+		get_viewport().set_input_as_handled()
+	
+	elif touch_data.type == "view":
+		_handle_view_drag(relative)
+		get_viewport().set_input_as_handled()
+
+# **ヘルパー関数**
+func _has_joystick_touch() -> bool:
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "joystick":
+			return true
+	return false
+
+func _has_view_touch() -> bool:
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "view":
+			return true
+	return false
 
 # **ボタン領域判定**
 func _is_button_area(pos: Vector2, screen_size: Vector2) -> bool:
-	# 右下コーナーの140x120エリア
 	var button_area = Rect2(screen_size.x - 150, screen_size.y - 120, 150, 120)
 	return button_area.has_point(pos)
 
 # **ボタンタッチ処理**
 func _handle_button_touch(pos: Vector2):
-	# SHOOTボタン領域（右下）
 	if shoot_button and shoot_button.get_global_rect().has_point(pos):
 		print("BUTTON: Shoot pressed")
 		shoot_pressed.emit()
-	# JUMPボタン領域（右上）
 	elif jump_button and jump_button.get_global_rect().has_point(pos):
 		print("BUTTON: Jump pressed") 
 		jump_pressed.emit()
@@ -136,18 +159,24 @@ func _handle_button_touch(pos: Vector2):
 # **ジョイスティック表示**
 func _show_joystick_at_position(pos: Vector2):
 	if joystick_visual:
+		# JoystickVisualを正しいサイズに設定（ジョイスティックの直径）
+		var joystick_size = joystick_radius * 2
+		joystick_visual.size = Vector2(joystick_size, joystick_size)
+		# タッチ位置を中心にして配置
 		joystick_visual.position = pos - Vector2(joystick_radius, joystick_radius)
 		joystick_visual.visible = true
 		_reset_joystick_knob()
+		print("JOYSTICK: Showed at ", pos, " Size: ", joystick_visual.size)
 
 # **ジョイスティック非表示**
 func _hide_joystick():
 	if joystick_visual:
 		joystick_visual.visible = false
+		print("JOYSTICK: Hidden")
 
 # **ジョイスティックドラッグ処理**
-func _handle_joystick_drag(touch_pos: Vector2):
-	var offset = touch_pos - joystick_center
+func _handle_joystick_drag(touch_pos: Vector2, center: Vector2):
+	var offset = touch_pos - center
 	var distance = offset.length()
 	
 	if distance > joystick_radius:
@@ -193,7 +222,6 @@ func _on_jump_pressed():
 func _notification(what):
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		print("=== FOCUS LOST: EMERGENCY RESET ===")
-		joystick_touch_id = -1
-		view_touch_id = -1
+		active_touches.clear()
 		_hide_joystick()
 		move_input.emit(Vector2.ZERO)

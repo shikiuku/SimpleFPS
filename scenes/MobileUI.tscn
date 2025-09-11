@@ -69,31 +69,34 @@ script = ExtResource("1_mobile")
 
 [node name="JoystickVisual" type="Control" parent="."]
 layout_mode = 3
-anchor_right = 0.4
-anchor_bottom = 1.0
-offset_left = -2.0
-offset_top = -2.0
-offset_right = -2.0
-offset_bottom = -2.0
+anchors_preset = 0
 
 [node name="JoystickBase" type="Panel" parent="JoystickVisual"]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 50.0
-offset_top = -150.0
-offset_right = 150.0
-offset_bottom = -50.0
-grow_vertical = 0
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_base")
 
 [node name="JoystickKnob" type="Panel" parent="JoystickVisual/JoystickBase"]
-layout_mode = 1
-offset_left = 35.0
-offset_top = 35.0
-offset_right = 65.0
-offset_bottom = 65.0
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -15.0
+offset_top = -15.0
+offset_right = 15.0
+offset_bottom = 15.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_knob")
 
 [node name="ShootButton" type="Button" parent="."]
