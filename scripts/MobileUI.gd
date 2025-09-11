@@ -139,11 +139,14 @@ func _on_movement_touch(event: InputEvent):
 		if event.pressed and joystick_touch_id == -1:
 			# 他の操作と競合していないかチェック
 			if not active_touch_ids.has(event.index):
-				# タッチ開始 - 視点操作を強制終了
+				# タッチ開始 - 視点操作が進行中の場合は穏やかに終了
 				if view_touch_id != -1:
-					print("=== FORCING VIEW TOUCH TO END - JOYSTICK STARTING ===")
+					print("=== GENTLY ENDING VIEW TOUCH - JOYSTICK STARTING ===")
+					# 視点操作を段階的に終了
 					active_touch_ids.erase(view_touch_id)
 					view_touch_id = -1
+					# 少し待機してからジョイスティックを開始
+					await get_tree().process_frame
 				
 				joystick_touch_id = event.index
 				active_touch_ids[event.index] = "joystick"
@@ -170,11 +173,13 @@ func _on_movement_touch(event: InputEvent):
 	# PC環境でのマウス操作サポート
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and joystick_touch_id == -1:
-			# 視点操作を強制終了
+			# 視点操作が進行中の場合は穏やかに終了
 			if view_touch_id != -1:
-				print("=== FORCING VIEW TOUCH TO END - JOYSTICK MOUSE STARTING ===")
+				print("=== GENTLY ENDING VIEW TOUCH - JOYSTICK MOUSE STARTING ===")
 				active_touch_ids.erase(view_touch_id)
 				view_touch_id = -1
+				# 少し待機してからジョイスティックを開始
+				await get_tree().process_frame
 			
 			# マウスでのジョイスティック開始（PC環境用）
 			joystick_touch_id = 0  # マウス用の固定ID
@@ -291,27 +296,17 @@ func _on_view_touch(event: InputEvent):
 				get_viewport().set_input_as_handled()
 				return
 			
-			# ボタンが押されている時も視点操作を大幅に制限
-			var base_sensitivity = 0.00008  # 元の約1/4に大幅減少
-			var sensitivity_modifier = 1.0
+			# 通常の視点操作（ボタンによる感度変更を削除）
+			var base_sensitivity = 0.0003  # 通常の感度に戻す
+			var delta = event.relative * base_sensitivity
 			
-			# ボタンが押されている時は更に感度を下げる
-			if is_any_button_pressed:
-				sensitivity_modifier *= 0.15  # 0.3 → 0.15 に更に制限
-			
-			var sensitivity = base_sensitivity * sensitivity_modifier
-			var delta = event.relative * sensitivity
-			
-			# 過度な動きを更に厳しく制限
-			var max_delta = 0.02  # 0.08 → 0.02 に大幅制限
-			if is_any_button_pressed:
-				max_delta = 0.008  # ボタン押下中は更に制限
+			# 過度な動きを制限（緩和）
+			var max_delta = 0.05  # より自然な動きを許可
 			delta = delta.limit_length(max_delta)
 			
 			look_input.emit(delta)
-			print("=== LOOK INPUT EMITTED (SAFE MODE) ===")
-			print("Look delta: ", delta, " Sensitivity: ", sensitivity)
-			print("Button pressed: ", is_any_button_pressed)
+			print("=== LOOK INPUT EMITTED (NORMAL MODE) ===")
+			print("Look delta: ", delta, " Sensitivity: ", base_sensitivity)
 			print("Event relative: ", event.relative)
 
 func _on_shoot_pressed():
@@ -322,29 +317,25 @@ func _on_jump_pressed():
 	print("JUMP BUTTON PRESSED!")
 	jump_pressed.emit()
 
-# ボタン状態の追跡（改善版）
+# ボタン状態の追跡（簡略版）
 var shoot_button_pressed = false
 var jump_button_pressed = false
 
 func _on_shoot_button_down():
 	shoot_button_pressed = true
-	is_any_button_pressed = true
-	print("Shoot button DOWN - reducing view sensitivity")
+	print("Shoot button DOWN")
 
 func _on_shoot_button_up():
 	shoot_button_pressed = false
-	is_any_button_pressed = jump_button_pressed  # 他のボタンがまだ押されているかチェック
-	print("Shoot button UP - view sensitivity: ", "reduced" if is_any_button_pressed else "normal")
+	print("Shoot button UP")
 
 func _on_jump_button_down():
 	jump_button_pressed = true
-	is_any_button_pressed = true
-	print("Jump button DOWN - reducing view sensitivity")
+	print("Jump button DOWN")
 
 func _on_jump_button_up():
 	jump_button_pressed = false
-	is_any_button_pressed = shoot_button_pressed  # 他のボタンがまだ押されているかチェック
-	print("Jump button UP - view sensitivity: ", "reduced" if is_any_button_pressed else "normal")
+	print("Jump button UP")
 
 # ボタンタッチIDの追跡
 func _on_shoot_button_touch(event: InputEvent):
