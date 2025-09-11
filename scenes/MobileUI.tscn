@@ -96,9 +96,7 @@ offset_right = 65.0
 offset_bottom = 65.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_joystick_knob")
 
-[node name="ButtonLayer" type="CanvasLayer" parent="."]
-
-[node name="ShootButton" type="Button" parent="ButtonLayer"]
+[node name="ShootButton" type="Button" parent="."]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
@@ -117,7 +115,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_shoot_button_pressed")
 theme_override_styles/normal = SubResource("StyleBoxFlat_shoot_button")
 text = "SHOOT"
 
-[node name="JumpButton" type="Button" parent="ButtonLayer"]
+[node name="JumpButton" type="Button" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -132,24 +130,3 @@ theme_override_font_sizes/font_size = 18
 theme_override_styles/pressed = SubResource("StyleBoxFlat_jump_button_pressed")
 theme_override_styles/normal = SubResource("StyleBoxFlat_jump_button")
 text = "JUMP"
-
-[node name="MovementArea" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 50.0
-offset_top = -150.0
-offset_right = 150.0
-offset_bottom = -50.0
-grow_vertical = 0
-
-[node name="ViewArea" type="Control" parent="."]
-layout_mode = 3
-anchor_left = 0.4
-anchor_right = 1.0
-anchor_bottom = 0.8
-offset_left = 10.0
-offset_top = 10.0
-offset_right = -150.0
-offset_bottom = -10.0

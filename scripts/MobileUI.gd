@@ -6,8 +6,8 @@ signal shoot_pressed
 signal jump_pressed
 
 @onready var joystick_visual = $JoystickVisual
-@onready var shoot_button = $ButtonLayer/ShootButton
-@onready var jump_button = $ButtonLayer/JumpButton
+@onready var shoot_button = $ShootButton
+@onready var jump_button = $JumpButton
 
 # アナログスティック
 @onready var joystick_base = $JoystickVisual/JoystickBase
@@ -42,10 +42,13 @@ func _ready():
 	
 	print("Pro zone system ready!")
 
-# **メインタッチハンドラー：プロ仕様の領域分離**
+# **メインタッチハンドラー：完全統一管理**
 func _input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
+	
+	# **即座にイベント消費** - 最優先
+	get_viewport().set_input_as_handled()
 	
 	var screen_size = get_viewport().get_visible_rect().size
 	var touch_pos = event.position
@@ -56,8 +59,14 @@ func _input(event):
 	
 	# **タッチ開始処理**
 	if event is InputEventScreenTouch and event.pressed:
-		print("=== PRO ZONE TOUCH START ===")
+		print("=== UNIFIED TOUCH START ===")
 		print("ID: ", event.index, " Pos: ", touch_pos, " Left: ", is_left_zone, " Right: ", is_right_zone)
+		
+		# ボタン領域チェック（右下領域）
+		if _is_button_area(touch_pos, screen_size):
+			print("BUTTON AREA: Touch in button zone")
+			_handle_button_touch(touch_pos)
+			return
 		
 		# 左領域：移動ジョイスティック専用
 		if is_left_zone and joystick_touch_id == -1:
@@ -66,7 +75,7 @@ func _input(event):
 			_show_joystick_at_position(touch_pos)
 			print("JOYSTICK ZONE: Started ID ", event.index)
 		
-		# 右領域：視点操作専用
+		# 右領域：視点操作専用（ボタン領域除く）
 		elif is_right_zone and view_touch_id == -1:
 			view_touch_id = event.index
 			print("VIEW ZONE: Started ID ", event.index)
@@ -76,7 +85,7 @@ func _input(event):
 	
 	# **タッチ終了処理**
 	elif event is InputEventScreenTouch and not event.pressed:
-		print("=== PRO ZONE TOUCH END ===")
+		print("=== UNIFIED TOUCH END ===")
 		
 		# 自分の担当領域かチェック
 		if event.index == joystick_touch_id:
@@ -106,6 +115,23 @@ func _input(event):
 		else:
 			# 領域違反や無効なドラッグは完全無視
 			print("ZONE VIOLATION: Ignored drag ID ", event.index)
+
+# **ボタン領域判定**
+func _is_button_area(pos: Vector2, screen_size: Vector2) -> bool:
+	# 右下コーナーの140x120エリア
+	var button_area = Rect2(screen_size.x - 150, screen_size.y - 120, 150, 120)
+	return button_area.has_point(pos)
+
+# **ボタンタッチ処理**
+func _handle_button_touch(pos: Vector2):
+	# SHOOTボタン領域（右下）
+	if shoot_button and shoot_button.get_global_rect().has_point(pos):
+		print("BUTTON: Shoot pressed")
+		shoot_pressed.emit()
+	# JUMPボタン領域（右上）
+	elif jump_button and jump_button.get_global_rect().has_point(pos):
+		print("BUTTON: Jump pressed") 
+		jump_pressed.emit()
 
 # **ジョイスティック表示**
 func _show_joystick_at_position(pos: Vector2):
