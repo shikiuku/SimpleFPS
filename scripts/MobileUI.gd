@@ -94,13 +94,19 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left: bool, is_right: b
 	
 	# 右領域：視点操作（ボタン領域以外の安全領域のみ）
 	# **重要：視点操作は1本の指のみ** - 2本目以降は完全拒否
-	elif is_safe_right and not _has_view_touch():
-		active_touches[touch_id] = {
-			"type": "view",
-			"last_pos": pos
-		}
-		print("VIEW: Started ID ", touch_id, " at ", pos, " (ONLY ONE FINGER ALLOWED)")
-		get_viewport().set_input_as_handled()
+	elif is_safe_right:
+		if _has_view_touch():
+			# 既に視点タッチがある場合は新しいタッチを完全拒否
+			print("VIEW_REJECTED: Already have view touch, rejecting ID ", touch_id)
+			get_viewport().set_input_as_handled()
+		else:
+			# 最初の視点タッチのみ許可
+			active_touches[touch_id] = {
+				"type": "view",
+				"last_pos": pos
+			}
+			print("VIEW: Started ID ", touch_id, " at ", pos, " (ONLY ONE FINGER ALLOWED)")
+			get_viewport().set_input_as_handled()
 	
 	else:
 		var reason = ""
@@ -134,6 +140,14 @@ func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
 		print("DRAG IGNORED: Unknown touch ID ", touch_id)
 		return
 	
+	# **安全対策：複数の視点タッチを強制削除**
+	_enforce_single_view_touch()
+	
+	# 削除後に再確認
+	if touch_id not in active_touches:
+		print("DRAG ENDED: Touch ID ", touch_id, " was removed by safety check")
+		return
+	
 	var touch_data = active_touches[touch_id]
 	
 	if touch_data.type == "joystick":
@@ -159,6 +173,29 @@ func _has_view_touch() -> bool:
 		if active_touches[touch_id].type == "view":
 			return true
 	return false
+
+# **視点タッチの数を取得**
+func _get_view_touch_count() -> int:
+	var count = 0
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "view":
+			count += 1
+	return count
+
+# **複数の視点タッチがある場合、最初の1つ以外を強制削除**
+func _enforce_single_view_touch():
+	var view_touches = []
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "view":
+			view_touches.append(touch_id)
+	
+	# 2つ以上ある場合、最初の1つ以外を削除
+	if view_touches.size() > 1:
+		print("WARNING: Multiple view touches detected (", view_touches.size(), "), removing extras")
+		for i in range(1, view_touches.size()):
+			var touch_id_to_remove = view_touches[i]
+			active_touches.erase(touch_id_to_remove)
+			print("REMOVED: Extra view touch ID ", touch_id_to_remove)
 
 # **ボタン領域判定**
 func _is_button_area(pos: Vector2, screen_size: Vector2) -> bool:
