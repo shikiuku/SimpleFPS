@@ -69,14 +69,20 @@ func _input(event):
 		_handle_touch_drag(touch_id, event.position, event.relative)
 
 func _handle_touch_start(touch_id: int, pos: Vector2, is_left: bool, is_right: bool, screen_size: Vector2):
-	# ボタン領域チェック（優先）
+	# **最優先：ボタン領域チェック**
 	if _is_button_area(pos, screen_size):
 		_handle_button_touch(pos)
-		get_viewport().set_input_as_handled()  # ボタン処理は消費
+		get_viewport().set_input_as_handled()
+		print("BUTTON: Touch consumed - no other processing")
 		return
 	
-	# 左領域：ジョイスティック
-	if is_left and not _has_joystick_touch():
+	# **安全な境界線設定** - ボタン領域を除外した左右分割
+	var safe_boundary_x = screen_size.x * 0.6  # 右40%はボタン用に確保
+	var is_safe_left = pos.x < safe_boundary_x
+	var is_safe_right = pos.x > safe_boundary_x and not _is_button_area(pos, screen_size)
+	
+	# 左領域：ジョイスティック（安全領域のみ）
+	if is_safe_left and not _has_joystick_touch():
 		active_touches[touch_id] = {
 			"type": "joystick",
 			"center": pos,
@@ -86,17 +92,25 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left: bool, is_right: b
 		print("JOYSTICK: Started ID ", touch_id, " at ", pos)
 		get_viewport().set_input_as_handled()
 	
-	# 右領域：視点操作
-	elif is_right and not _has_view_touch():
+	# 右領域：視点操作（ボタン領域以外の安全領域のみ）
+	# **重要：視点操作は1本の指のみ** - 2本目以降は完全拒否
+	elif is_safe_right and not _has_view_touch():
 		active_touches[touch_id] = {
 			"type": "view",
 			"last_pos": pos
 		}
-		print("VIEW: Started ID ", touch_id, " at ", pos)
+		print("VIEW: Started ID ", touch_id, " at ", pos, " (ONLY ONE FINGER ALLOWED)")
 		get_viewport().set_input_as_handled()
 	
 	else:
-		print("IGNORED: Touch rejected - Left busy=", _has_joystick_touch(), " Right busy=", _has_view_touch())
+		var reason = ""
+		if _has_view_touch():
+			reason = "VIEW_BUSY (only 1 finger allowed for view control)"
+		elif _has_joystick_touch():
+			reason = "JOYSTICK_BUSY"
+		elif not is_safe_left and not is_safe_right:
+			reason = "UNSAFE_ZONE"
+		print("IGNORED: Touch rejected - ", reason, " SafeLeft=", is_safe_left, " SafeRight=", is_safe_right)
 
 func _handle_touch_end(touch_id: int):
 	if touch_id in active_touches:
@@ -117,6 +131,7 @@ func _handle_touch_end(touch_id: int):
 
 func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
 	if touch_id not in active_touches:
+		print("DRAG IGNORED: Unknown touch ID ", touch_id)
 		return
 	
 	var touch_data = active_touches[touch_id]
@@ -128,6 +143,9 @@ func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
 	elif touch_data.type == "view":
 		_handle_view_drag(relative)
 		get_viewport().set_input_as_handled()
+	
+	else:
+		print("DRAG ERROR: Unknown touch type ", touch_data.type)
 
 # **ヘルパー関数**
 func _has_joystick_touch() -> bool:
