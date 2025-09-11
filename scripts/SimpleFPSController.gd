@@ -13,6 +13,10 @@ extends CharacterBody3D
 @onready var camera_holder = $CameraHolder
 @onready var mesh_instance = $MeshInstance3D
 
+# 視点回転を絶対値で管理
+var current_y_rotation = 0.0  # 水平回転
+var current_x_rotation = 0.0  # 垂直回転
+
 # 弾丸のプリロード
 var bullet_scene = preload("res://scenes/Bullet.tscn")
 
@@ -31,6 +35,10 @@ func _ready():
 	# 初期位置を設定（重要！）
 	sync_position = global_position
 	sync_rotation_y = rotation.y
+	
+	# 視点回転の初期値を設定
+	current_y_rotation = rotation.y
+	current_x_rotation = camera.rotation.x
 	
 	# MultiplayerSynchronizerの設定
 	call_deferred("setup_multiplayer")
@@ -94,15 +102,23 @@ func _on_mobile_move_input(direction: Vector2):
 	mobile_movement = direction
 	print("Mobile move input: ", direction)
 
-# 視点操作機能を再実装
+# 視点操作機能を再実装（絶対値管理版）
 func _on_mobile_look_input(delta: Vector2):
 	if is_multiplayer_authority():
 		print("Mobile look input: ", delta)
-		# モバイル操作での視点変更
-		rotate_y(-delta.x)
-		camera.rotate_x(-delta.y)
-		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
-		print("Camera rotation updated - Y: ", rotation.y, " X: ", camera.rotation.x)
+		
+		# 絶対値で回転を管理（飛ばされる問題を根本解決）
+		current_y_rotation -= delta.x
+		current_x_rotation -= delta.y
+		
+		# 垂直回転は-90度から90度に制限
+		current_x_rotation = clamp(current_x_rotation, deg_to_rad(-90), deg_to_rad(90))
+		
+		# 実際の回転を適用
+		rotation.y = current_y_rotation
+		camera.rotation.x = current_x_rotation
+		
+		print("Camera rotation set - Y: ", current_y_rotation, " X: ", current_x_rotation)
 
 func _on_mobile_shoot():
 	if is_multiplayer_authority():
