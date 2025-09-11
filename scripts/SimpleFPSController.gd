@@ -44,8 +44,8 @@ func setup_multiplayer():
 		setup_mobile_ui()
 		setup_game_ui()
 		
-		# マウス入力がある場合はマウスをキャプチャ
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		# PC用にマウスカーソルを表示（スマホ版なのでキャプチャしない）
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		
 		camera.current = true
 		mesh_instance.visible = false
@@ -136,22 +136,20 @@ func _input(event):
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		return
 	
-	# PC環境でのマウス射撃（タッチデバイス以外）
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		# タッチデバイスでないことを確認
-		if not _is_touch_device():
-			shoot()
+	# PC環境でのマウス射撃を無効化（スマホ用アプリなのでボタンのみ）
+	# if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	# 	# タッチデバイスでないことを確認
+	# 	if not _is_touch_device():
+	# 		shoot()
 
 func _unhandled_input(event):
 	# 自分のプレイヤーのみが入力を処理
 	if not is_multiplayer_authority():
 		return
 		
-	# タッチイベントで射撃処理がされないようにのみブロック
-	if event is InputEventScreenTouch and event.pressed:
-		# タッチ射撃のみを無効化
-		if _is_touch_device():
-			return
+	# すべてのタッチイベントをブロック（スマホ用アプリなのでボタンのみ）
+	if event is InputEventScreenTouch:
+		return
 
 # タッチデバイスかどうかを判定
 func _is_touch_device() -> bool:

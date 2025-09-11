@@ -21,6 +21,11 @@ NetworkManager="*res://scripts/NetworkManager.gd"
 
 [display]
 
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/mode=0
+window/size/resizable=true
+window/size/borderless=false
 window/stretch/mode="canvas_items"
 window/handheld/orientation=1
 

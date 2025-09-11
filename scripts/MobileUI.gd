@@ -59,6 +59,13 @@ func _ready():
 	if movement_area:
 		movement_area.gui_input.connect(_on_movement_touch)
 		print("Movement area connected")
+		print("Movement area position: ", movement_area.position)
+		print("Movement area size: ", movement_area.size)
+		print("Movement area global position: ", movement_area.global_position)
+		print("Movement area visible: ", movement_area.visible)
+		print("Movement area z_index: ", movement_area.z_index)
+	else:
+		print("ERROR: movement_area is null!")
 	if view_area:
 		view_area.gui_input.connect(_on_view_touch)
 		print("View area connected")
@@ -119,7 +126,12 @@ func _is_position_in_joystick_area(view_area_touch_pos: Vector2) -> bool:
 	return is_in_area
 
 func _on_movement_touch(event: InputEvent):
+	print("=== MOVEMENT TOUCH EVENT RECEIVED ===")
+	print("Event type: ", event.get_class())
+	print("Event: ", event)
+	
 	if not joystick_base or not joystick_knob:
+		print("ERROR: joystick_base or joystick_knob is null!")
 		return
 		
 	if event is InputEventScreenTouch:
@@ -148,6 +160,29 @@ func _on_movement_touch(event: InputEvent):
 		# ドラッグ中（自分のタッチIDのみ処理）
 		if active_touch_ids.get(event.index) == "joystick":
 			_update_joystick(event.position)
+	
+	# PC環境でのマウス操作サポート
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and joystick_touch_id == -1:
+			# マウスでのジョイスティック開始（PC環境用）
+			joystick_touch_id = 0  # マウス用の固定ID
+			active_touch_ids[0] = "joystick_mouse"
+			_update_joystick(event.position)
+			print("=== JOYSTICK MOUSE STARTED ===")
+			print("Position: ", event.position)
+		elif not event.pressed and joystick_touch_id == 0:
+			# マウスでのジョイスティック終了
+			joystick_touch_id = -1
+			active_touch_ids.erase(0)
+			_reset_joystick_knob()
+			move_input.emit(Vector2.ZERO)
+			print("Joystick mouse ended")
+	
+	elif event is InputEventMouseMotion and joystick_touch_id == 0:
+		# マウスでのドラッグ中（PC環境用）
+		if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			_update_joystick(event.position)
+			print("Joystick mouse drag: ", event.position)
 
 # 完全に新しいジョイスティック更新関数
 func _update_joystick(movement_area_touch_pos: Vector2):
@@ -196,6 +231,8 @@ func _on_view_touch(event: InputEvent):
 	# 既にジョイスティックが使用中の場合は全てのViewAreaイベントを無視
 	if joystick_touch_id != -1:
 		print("=== VIEW AREA EVENT BLOCKED - JOYSTICK ACTIVE ===")
+		# イベント消費を確実にするため、accept_event()を追加
+		get_viewport().set_input_as_handled()
 		return
 	
 	if event is InputEventScreenTouch:
@@ -229,6 +266,7 @@ func _on_view_touch(event: InputEvent):
 			# ジョイスティック使用中は視点操作を完全に無効化
 			if joystick_touch_id != -1:
 				print("=== VIEW INPUT BLOCKED - JOYSTICK ACTIVE ===")
+				get_viewport().set_input_as_handled()
 				return
 			
 			# ボタンが押されている時も視点操作を大幅に制限
