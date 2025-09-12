@@ -13,6 +13,12 @@ height = 1.8
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
 albedo_color = Color(0.2, 0.6, 1, 1)
 
+[sub_resource type="BoxMesh" id="BoxMesh_ViewDirection"]
+size = Vector3(0.1, 0.1, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ViewDirection"]
+albedo_color = Color(1, 1, 0, 0.8)
+
 [node name="FPSPlayer" type="CharacterBody3D"]
 script = ExtResource("1_abc123")
 
@@ -27,3 +33,9 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
 
 [node name="Camera3D" type="Camera3D" parent="CameraHolder"]
+
+[node name="ViewDirectionLine" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, -0.75)
+visible = false
+mesh = SubResource("BoxMesh_ViewDirection")
+surface_material_override/0 = SubResource("StandardMaterial3D_ViewDirection")
