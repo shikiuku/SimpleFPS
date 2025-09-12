@@ -65,10 +65,10 @@ func _input(event):
 
 func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 	if is_left_side:
-		# **左側 = ジョイスティック（1本のみ） - 強制的に既存タッチを削除**
+		# **左側 = ジョイスティック（1本のみ） - 既存タッチがある場合は無視**
 		if _has_joystick_touch():
-			print("JOYSTICK: Forcing removal of existing touch")
-			_force_remove_joystick_touches()
+			print("JOYSTICK: Already has active joystick touch, ignoring new touch ID=", touch_id)
+			return
 		
 		active_touches[touch_id] = {
 			"type": "joystick",
@@ -84,16 +84,16 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 			print("BUTTON AREA: Touch ignored in favor of UI buttons")
 			return
 		
-		# **視点（1本のみ） - 強制的に既存タッチを削除**
+		# **視点（1本のみ） - 既存タッチがある場合は無視**
 		if _has_view_touch():
-			print("VIEW: Forcing removal of existing touch")
-			_force_remove_view_touches()
+			print("VIEW: Already has active view touch, ignoring new touch ID=", touch_id)
+			return
 		
 		active_touches[touch_id] = {
 			"type": "view",
 			"last_pos": pos
 		}
-		print("VIEW START: ID=", touch_id, " (SINGLE FINGER ENFORCED)")
+		print("VIEW START: ID=", touch_id)
 
 func _handle_touch_end(touch_id: int):
 	if touch_id not in active_touches:
@@ -112,7 +112,7 @@ func _handle_touch_end(touch_id: int):
 	
 	active_touches.erase(touch_id)
 
-func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
+func _handle_touch_drag(touch_id: int, pos: Vector2, _relative: Vector2):
 	if touch_id not in active_touches:
 		print("DRAG IGNORED: Unknown ID=", touch_id)
 		return
@@ -123,7 +123,8 @@ func _handle_touch_drag(touch_id: int, pos: Vector2, relative: Vector2):
 		_handle_joystick_drag(pos, touch_data.center)
 		
 	elif touch_data.type == "view":
-		_handle_view_drag(relative)
+		# relativeを使わず、絶対座標で計算
+		_handle_view_drag(pos, touch_data)
 
 # **ジョイスティック処理**
 func _show_joystick_at(pos: Vector2):
@@ -154,11 +155,27 @@ func _handle_joystick_drag(current_pos: Vector2, center: Vector2):
 	move_input.emit(input_vector)
 	print("JOYSTICK: ", input_vector)
 
-# **視点処理**
-func _handle_view_drag(relative: Vector2):
-	var view_input_vector = relative * 2.0  # 感度を4倍に上げる（0.5→2.0）
+# **視点処理 - 絶対座標ベースで相対移動を安全に計算**
+func _handle_view_drag(current_pos: Vector2, touch_data: Dictionary):
+	# 前回の位置との差を計算（相対座標を使わない）
+	var last_pos = touch_data.last_pos
+	var delta = current_pos - last_pos
+	
+	# 異常な移動量をフィルタリング（ジャンプ防止）
+	var max_delta = 50.0  # 1フレームでの最大移動量
+	if delta.length() > max_delta:
+		print("VIEW: Abnormal delta detected, ignoring: ", delta)
+		# 座標だけ更新して、視点変更はスキップ
+		touch_data.last_pos = current_pos
+		return
+	
+	# 通常の視点変更処理
+	var view_input_vector = delta * 2.0  # 感度
 	view_input.emit(view_input_vector)
-	print("VIEW: ", view_input_vector)
+	
+	# 座標を更新
+	touch_data.last_pos = current_pos
+	print("VIEW: ", view_input_vector, " Delta: ", delta)
 
 # **ヘルパー関数**
 func _has_joystick_touch() -> bool:
@@ -173,29 +190,7 @@ func _has_view_touch() -> bool:
 			return true
 	return false
 
-# **強制削除関数**
-func _force_remove_joystick_touches():
-	var to_remove = []
-	for touch_id in active_touches:
-		if active_touches[touch_id].type == "joystick":
-			to_remove.append(touch_id)
-	
-	for touch_id in to_remove:
-		print("FORCE REMOVE JOYSTICK: ID=", touch_id)
-		active_touches.erase(touch_id)
-	
-	_hide_joystick()
-	move_input.emit(Vector2.ZERO)
-
-func _force_remove_view_touches():
-	var to_remove = []
-	for touch_id in active_touches:
-		if active_touches[touch_id].type == "view":
-			to_remove.append(touch_id)
-	
-	for touch_id in to_remove:
-		print("FORCE REMOVE VIEW: ID=", touch_id)
-		active_touches.erase(touch_id)
+# **強制削除関数は削除 - 代わりにタッチを無視する方式に変更**
 
 # **ボタン処理**
 func _on_shoot_button_pressed():
@@ -206,21 +201,29 @@ func _on_jump_button_pressed():
 	print("JUMP button pressed!")
 	jump_pressed.emit()
 
-# **ボタン領域チェック**
+# **ボタン領域チェック - より堅牢な判定**
 func _is_in_button_area(pos: Vector2) -> bool:
 	if not shoot_button or not jump_button:
+		print("BUTTON CHECK: Buttons not found")
 		return false
 	
 	# ボタンのグローバル位置とサイズを取得
 	var shoot_rect = Rect2(shoot_button.global_position, shoot_button.size)
 	var jump_rect = Rect2(jump_button.global_position, jump_button.size)
 	
-	# 少し余裕を持たせる（20ピクセル）
-	var margin = 20
+	# より大きなマージンで安全性を向上（40ピクセル）
+	var margin = 40
 	shoot_rect = shoot_rect.grow(margin)
 	jump_rect = jump_rect.grow(margin)
 	
-	return shoot_rect.has_point(pos) or jump_rect.has_point(pos)
+	var in_shoot = shoot_rect.has_point(pos)
+	var in_jump = jump_rect.has_point(pos)
+	var in_button_area = in_shoot or in_jump
+	
+	if in_button_area:
+		print("BUTTON CHECK: Touch in button area - Shoot:", in_shoot, " Jump:", in_jump, " Pos:", pos)
+	
+	return in_button_area
 
 # **緊急リセット**
 func _notification(what):
