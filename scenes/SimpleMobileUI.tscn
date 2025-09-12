@@ -1,17 +1,19 @@
-[gd_scene load_steps=2 format=3 uid="uid://cbexfgmqjqgd"]
+[gd_scene load_steps=2 format=3 uid="uid://bquojwqju87x"]
 
-[ext_resource type="Script" path="res://scripts/SimpleMobileUI.gd" id="1"]
+[ext_resource type="Script" uid="uid://4ljjaii8ke0r" path="res://scripts/SimpleMobileUI.gd" id="1"]
 
 [node name="SimpleMobileUI" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1")
 
 [node name="JoystickVisual" type="Control" parent="."]
-layout_mode = 0
 visible = false
+anchors_preset = 0
 
 [node name="Base" type="ColorRect" parent="JoystickVisual"]
 layout_mode = 0
@@ -24,3 +26,27 @@ layout_mode = 0
 offset_right = 60.0
 offset_bottom = 60.0
 color = Color(0.6, 0.6, 0.6, 0.8)
+
+[node name="ShootButton" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -120.0
+offset_right = -20.0
+offset_bottom = -20.0
+text = "SHOOT"
+
+[node name="JumpButton" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -240.0
+offset_top = -120.0
+offset_right = -140.0
+offset_bottom = -20.0
+text = "JUMP"

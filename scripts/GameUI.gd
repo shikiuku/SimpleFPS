@@ -4,7 +4,7 @@ extends CanvasLayer
 @onready var player_count_label = $PlayerCountLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.22"
+const VERSION = "v1.7.23"
 
 func _ready():
 	# バージョンを表示

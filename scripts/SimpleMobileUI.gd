@@ -1,14 +1,20 @@
-extends CanvasLayer
+extends Control
 
 # **シンプルモバイルUI v1.0.0 - ジョイスティックと視点移動のみ**
 
 signal move_input(input: Vector2)
 signal view_input(relative: Vector2)
+signal shoot_pressed
+signal jump_pressed
 
 # ジョイスティック関連
 @onready var joystick_visual = $JoystickVisual
-@onready var joystick_base = $JoystickVisual/JoystickBase
-@onready var joystick_knob = $JoystickVisual/JoystickBase/JoystickKnob
+@onready var joystick_base = $JoystickVisual/Base
+@onready var joystick_knob = $JoystickVisual/Knob
+
+# ボタン関連
+@onready var shoot_button = $ShootButton
+@onready var jump_button = $JumpButton
 
 # タッチ管理
 var active_touches = {}  # touch_id -> touch_data
@@ -17,11 +23,17 @@ var active_touches = {}  # touch_id -> touch_data
 const JOYSTICK_MAX_DISTANCE = 60.0
 
 func _ready():
-	print("Simple Mobile UI - ジョイスティックと視点移動のみ")
+	print("Simple Mobile UI - ジョイスティック、視点移動、ボタン付き")
 	
 	# ジョイスティック非表示
 	if joystick_visual:
 		joystick_visual.visible = false
+	
+	# ボタンのシグナル接続
+	if shoot_button:
+		shoot_button.pressed.connect(_on_shoot_button_pressed)
+	if jump_button:
+		jump_button.pressed.connect(_on_jump_button_pressed)
 	
 	print("Simple Mobile UI ready!")
 
@@ -178,6 +190,15 @@ func _force_remove_view_touches():
 	for touch_id in to_remove:
 		print("FORCE REMOVE VIEW: ID=", touch_id)
 		active_touches.erase(touch_id)
+
+# **ボタン処理**
+func _on_shoot_button_pressed():
+	print("SHOOT button pressed!")
+	shoot_pressed.emit()
+
+func _on_jump_button_pressed():
+	print("JUMP button pressed!")
+	jump_pressed.emit()
 
 # **緊急リセット**
 func _notification(what):

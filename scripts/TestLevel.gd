@@ -3,6 +3,7 @@ extends Node3D
 # プレイヤーシーンの参照
 var player_scene = preload("res://scenes/SimpleFPSPlayer.tscn")
 
+
 func _ready():
 	print("TestLevel: _ready() start")
 	# マルチプレイヤーイベントに接続
@@ -18,6 +19,8 @@ func _ready():
 		NetworkManager.notify_test_level_if_ready()
 	else:
 		print("TestLevel: NetworkManager not found!")
+
+	
 
 func _on_player_connected(peer_id: int):
 	print("=== PLAYER CONNECTED EVENT ===")

@@ -22,7 +22,7 @@ var bullet_scene = preload("res://scenes/Bullet.tscn")
 
 # モバイル入力関連
 var mobile_movement = Vector2.ZERO
-var mobile_ui: CanvasLayer = null
+var mobile_ui: Control = null
 
 func _ready():
 	# マルチプレイヤーのピアが存在するまで待機
@@ -52,8 +52,7 @@ func setup_multiplayer():
 		setup_mobile_ui()
 		setup_game_ui()
 		
-		# PC用にマウスカーソルを表示（スマホ版なのでキャプチャしない）
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		# スマホ版専用のため、マウスモード設定は不要
 		
 		camera.current = true
 		mesh_instance.visible = false
@@ -73,18 +72,22 @@ func setup_mobile_ui():
 	print("Setting up mobile UI (always enabled)...")
 	
 	# シンプルモバイルUI を読み込み（ボタンなし版）
-	var mobile_ui_scene = preload("res://scenes/TestSimpleMobileUI.tscn")
+	var mobile_ui_scene = preload("res://scenes/SimpleMobileUI.tscn")
 	mobile_ui = mobile_ui_scene.instantiate()
 	get_tree().current_scene.add_child(mobile_ui)
 	
-	# シグナルを接続（シンプルUI版 - ジョイスティックと視点のみ）
+	# シグナルを接続（シンプルUI版 - ジョイスティック、視点、ボタン）
 	mobile_ui.move_input.connect(_on_mobile_move_input)
 	mobile_ui.view_input.connect(_on_mobile_view_input)
+	mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
+	mobile_ui.jump_pressed.connect(_on_mobile_jump)
 	
 	print("Simple Mobile UI setup complete!")
 	print("Simple Mobile UI signals connected:")
 	print("  - move_input: ", mobile_ui.move_input.is_connected(_on_mobile_move_input))
 	print("  - view_input: ", mobile_ui.view_input.is_connected(_on_mobile_view_input))
+	print("  - shoot_pressed: ", mobile_ui.shoot_pressed.is_connected(_on_mobile_shoot))
+	print("  - jump_pressed: ", mobile_ui.jump_pressed.is_connected(_on_mobile_jump))
 
 func setup_game_ui():
 	# GameUIを読み込み（全プレイヤーで共有、1回だけ作成）
@@ -152,29 +155,13 @@ func _input(event):
 	if not is_multiplayer_authority():
 		return
 	
-	# 視点操作機能削除 - マウスによる視点変更は無効化
-	# if event is InputEventMouseMotion:
-	# 	# マウスでカメラ回転
-	# 	rotate_y(-event.relative.x * mouse_sensitivity)
-	# 	camera.rotate_x(-event.relative.y * mouse_sensitivity)
-	# 	camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
-	
-	# マウスモード切り替えも削除（視点操作機能削除）
-	# if event.is_action_pressed("mouseMode"):
-	# 	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-	# 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	# 	else:
-	# 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	# PC用の射撃操作を削除 - モバイルボタンのみ使用
+	# if event.is_action_pressed("shootAction"):
+	# 	shoot()
 	
 	# タッチイベントはMobileUIに任せる（処理済みにはしない）
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		return
-	
-	# PC環境でのマウス射撃を無効化（スマホ用アプリなのでボタンのみ）
-	# if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-	# 	# タッチデバイスでないことを確認
-	# 	if not _is_touch_device():
-	# 		shoot()
 
 func _unhandled_input(event):
 	# 自分のプレイヤーのみが入力を処理
@@ -204,22 +191,18 @@ func _physics_process(delta):
 		sync_position = global_position
 		sync_rotation_y = rotation.y
 		
-		# RPC経由で位置を送信（確実に全員に届ける）
+		# RPC経由で位置を送信（より確実な方法）
 		var current_peers = multiplayer.get_peers()
 		if multiplayer.has_multiplayer_peer() and current_peers.size() > 0:
-			# サーバー（ID=1）が存在し、シーンに追加されているかチェック
-			var server_id = 1
-			var server_node = get_parent().get_node_or_null(str(server_id))
-			
-			# サーバーノードが存在し、シーンツリーにある場合のみRPCを送信
-			if server_node != null and server_node.is_inside_tree():
-				update_remote_position.rpc(sync_position, sync_rotation_y)
-			else:
-				# サーバーが見つからない場合の詳細なデバッグ情報
-				if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
-					print("WARN: Server node not found - ID:", server_id, " Parent:", get_parent().name)
-					print("Available peers:", current_peers)
-					print("Parent children:", get_parent().get_children().map(func(child): return child.name))
+			# 全ピアに対してRPCを送信（ピアIDをチェックして存在する場合のみ）
+			for peer_id in current_peers:
+				var peer_node = get_parent().get_node_or_null(str(peer_id))
+				if peer_node != null and peer_node.is_inside_tree():
+					update_remote_position.rpc_id(peer_id, sync_position, sync_rotation_y)
+				else:
+					# ピアが見つからない場合のデバッグ情報（頻度を下げる）
+					if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
+						print("WARN: Peer node not found - ID:", peer_id, " Parent:", get_parent().name)
 		
 		# デバッグ: 同期データを送信していることを確認（頻度を下げる）
 		if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
@@ -238,31 +221,21 @@ func handle_movement(delta):
 	if not is_on_floor():
 		velocity.y += get_gravity().y * delta
 	
-	# ジャンプ（PC + モバイル対応）
-	var should_jump = (Input.is_action_just_pressed("jump") or mobile_jump_requested) and is_on_floor()
+	# ジャンプ（モバイルのみ）
+	var should_jump = mobile_jump_requested and is_on_floor()
 	if should_jump:
 		velocity.y = jump_velocity
 		mobile_jump_requested = false  # リセット
 
-	# 移動入力を取得（PC＋モバイル対応）
+	# 移動入力を取得（モバイルのみ）
 	var input_dir = Vector2.ZERO
 	
-	# PC入力
-	if Input.is_action_pressed("move_forward"):
-		input_dir.y -= 1
-	if Input.is_action_pressed("move_backward"):
-		input_dir.y += 1
-	if Input.is_action_pressed("move_left"):
-		input_dir.x -= 1
-	if Input.is_action_pressed("move_right"):
-		input_dir.x += 1
-	
-	# モバイル入力を追加（常に有効）
+	# モバイル入力のみ使用
 	if mobile_movement != Vector2.ZERO:
 		input_dir = mobile_movement
 	
-	# 移動速度を決定
-	var current_speed = run_speed if Input.is_action_pressed("run") else walk_speed
+	# 移動速度を決定（常に歩行速度）
+	var current_speed = walk_speed
 	
 	# プレイヤーの向きに基づいて移動方向を計算
 	var direction = Vector3.ZERO
@@ -292,15 +265,13 @@ func shoot():
 	# 他のプレイヤーにも弾丸を生成させる
 	var current_peers = multiplayer.get_peers()
 	if multiplayer.has_multiplayer_peer() and current_peers.size() > 0:
-		# サーバー（ID=1）が存在し、シーンに追加されているかチェック
-		var server_id = 1
-		var server_node = get_parent().get_node_or_null(str(server_id))
-		
-		# サーバーノードが存在し、シーンツリーにある場合のみRPCを送信
-		if server_node != null and server_node.is_inside_tree():
-			spawn_bullet_remote.rpc(shoot_position, shoot_direction)
-		else:
-			print("WARN: Cannot send bullet RPC - Server node not found (ID: ", server_id, ")")
+		# 全ピアに対してRPCを送信
+		for peer_id in current_peers:
+			var peer_node = get_parent().get_node_or_null(str(peer_id))
+			if peer_node != null and peer_node.is_inside_tree():
+				spawn_bullet_remote.rpc_id(peer_id, shoot_position, shoot_direction)
+			else:
+				print("WARN: Cannot send bullet RPC - Peer node not found (ID: ", peer_id, ")")
 
 # 弾丸を実際に生成する関数
 func _spawn_bullet(position: Vector3, direction: Vector3):
