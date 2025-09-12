@@ -76,14 +76,25 @@ func setup_multiplayer():
 	else:
 		# 他のプレイヤー（リモート）
 		camera.current = false
+		
+		var player_id = name.to_int()
+		
+		# Player1（サーバー側）は表示しない
+		if player_id == 1:
+			mesh_instance.visible = false
+			if view_direction_line:
+				view_direction_line.visible = false
+			print("Server player (Player1) - HIDDEN")
+			return
+		
 		mesh_instance.visible = true
 		
-		# 視点方向ラインを表示（他プレイヤーのみ）
+		# 視点方向ラインを表示（他プレイヤーのみ、Player1以外）
 		if view_direction_line:
 			view_direction_line.visible = true
 		
 		# プレイヤーIDに基づいて色を決定
-		var player_color = get_player_color(name.to_int())
+		var player_color = get_player_color(player_id)
 		var new_material = StandardMaterial3D.new()
 		new_material.albedo_color = player_color
 		mesh_instance.set_surface_override_material(0, new_material)

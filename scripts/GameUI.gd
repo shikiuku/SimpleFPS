@@ -31,18 +31,31 @@ func _on_update_timer():
 	update_health_display()
 
 func update_player_count():
-	var peer_count = 1  # 自分
+	var peer_count = 0
 	
 	# マルチプレイヤーが有効な場合
 	if multiplayer.has_multiplayer_peer():
-		peer_count = multiplayer.get_peers().size() + 1  # +1 for self
+		var peers = multiplayer.get_peers()
+		peer_count = peers.size()
+		
+		# Player1（サーバー側）を除外してカウント
+		for peer_id in peers:
+			if peer_id == 1:  # Player1はサーバー側なので除外
+				peer_count -= 1
+		
+		# 自分をカウントに追加（自分がPlayer1でない場合）
+		if multiplayer.get_unique_id() != 1:
+			peer_count += 1
+	else:
+		peer_count = 1  # ローカルモードの場合は自分だけ
 	
 	player_count_label.text = "Players: " + str(peer_count) + "/8"
 	
 	# デバッグ情報
 	if multiplayer.has_multiplayer_peer():
 		var peers = multiplayer.get_peers()
-		print("Connected peers: ", peers, " Total players: ", peer_count)
+		var my_id = multiplayer.get_unique_id()
+		print("All peers: ", peers, " My ID: ", my_id, " Real players: ", peer_count)
 
 func update_health_display():
 	# HealthLabelが存在するか確認
