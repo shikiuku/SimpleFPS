@@ -79,9 +79,9 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 		
 	else:
 		# **右側 = 視点操作とボタン操作を区別**
-		# ボタン領域かどうかをチェック
+		# ボタン領域内では視点操作を開始しない（ボタンのタッチイベントは通す）
 		if _is_in_button_area(pos):
-			print("BUTTON AREA: Touch ignored in favor of UI buttons")
+			print("BUTTON AREA: View touch blocked, but UI buttons still work")
 			return
 		
 		# **視点（1本のみ） - 既存タッチがある場合は無視**
@@ -123,6 +123,12 @@ func _handle_touch_drag(touch_id: int, pos: Vector2, _relative: Vector2):
 		_handle_joystick_drag(pos, touch_data.center)
 		
 	elif touch_data.type == "view":
+		# ドラッグ中にボタン領域に入ったら視点操作を中断
+		if _is_in_button_area(pos):
+			print("VIEW: Entered button area, ending view touch")
+			active_touches.erase(touch_id)
+			return
+		
 		# relativeを使わず、絶対座標で計算
 		_handle_view_drag(pos, touch_data)
 
@@ -211,8 +217,8 @@ func _is_in_button_area(pos: Vector2) -> bool:
 	var shoot_rect = Rect2(shoot_button.global_position, shoot_button.size)
 	var jump_rect = Rect2(jump_button.global_position, jump_button.size)
 	
-	# より大きなマージンで安全性を向上（40ピクセル）
-	var margin = 40
+	# 小さなマージンでボタンを押しやすく（15ピクセル）
+	var margin = 15
 	shoot_rect = shoot_rect.grow(margin)
 	jump_rect = jump_rect.grow(margin)
 	
