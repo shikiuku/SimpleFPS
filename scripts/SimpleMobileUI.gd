@@ -217,8 +217,8 @@ func _is_in_button_area(pos: Vector2) -> bool:
 	var shoot_rect = Rect2(shoot_button.global_position, shoot_button.size)
 	var jump_rect = Rect2(jump_button.global_position, jump_button.size)
 	
-	# 小さなマージンでボタンを押しやすく（15ピクセル）
-	var margin = 15
+	# より大きなマージンでボタンを押しやすく（30ピクセル）
+	var margin = 30
 	shoot_rect = shoot_rect.grow(margin)
 	jump_rect = jump_rect.grow(margin)
 	
