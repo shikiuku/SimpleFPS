@@ -33,6 +33,11 @@ var mobile_movement = Vector2.ZERO
 var mobile_ui: Control = null
 
 func _ready():
+	# 衝突レイヤーを強制設定（.tscnファイルの設定が消える問題の対策）
+	collision_layer = 1  # Player layer
+	collision_mask = 3   # Player + Environment layers
+	print("Player collision settings - layer: ", collision_layer, " mask: ", collision_mask)
+	
 	# マルチプレイヤーのピアが存在するまで待機
 	await get_tree().process_frame
 	
