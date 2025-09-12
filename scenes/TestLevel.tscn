@@ -64,6 +64,8 @@ tonemap_mode = 2
 script = ExtResource("2_testlevel")
 
 [node name="Ground" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 physics_material_override = SubResource("PhysicsMaterial_ground")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
@@ -76,6 +78,8 @@ mesh = SubResource("BoxMesh_ground")
 surface_material_override/0 = SubResource("StandardMaterial3D_ground")
 
 [node name="Wall_East" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.5, 3, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall_East"]
@@ -86,6 +90,8 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_West" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.5, 3, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall_West"]
@@ -96,6 +102,8 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_North" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 3, 19.5)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall_North"]
@@ -106,6 +114,8 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_South" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 3, -19.5)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall_South"]
@@ -116,6 +126,8 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Obstacle1" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 5)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -129,6 +141,8 @@ mesh = SubResource("BoxMesh_obstacle")
 surface_material_override/0 = SubResource("StandardMaterial3D_obstacle")
 
 [node name="Obstacle2" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, -8)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -140,6 +154,8 @@ mesh = SubResource("BoxMesh_obstacle")
 surface_material_override/0 = SubResource("StandardMaterial3D_obstacle")
 
 [node name="Obstacle3" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, -12)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -151,6 +167,8 @@ mesh = SubResource("BoxMesh_obstacle")
 surface_material_override/0 = SubResource("StandardMaterial3D_obstacle")
 
 [node name="Obstacle4" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 10)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -162,6 +180,8 @@ mesh = SubResource("BoxMesh_obstacle")
 surface_material_override/0 = SubResource("StandardMaterial3D_obstacle")
 
 [node name="Pillar1" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 12)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -175,6 +195,8 @@ mesh = SubResource("CylinderMesh_pillar")
 surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
 
 [node name="Pillar2" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2, 0)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
@@ -186,6 +208,8 @@ mesh = SubResource("CylinderMesh_pillar")
 surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
 
 [node name="Pillar3" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, -6)
 physics_material_override = SubResource("PhysicsMaterial_bounce")
 
