@@ -1,4 +1,4 @@
-extends Area3D
+extends RigidBody3D
 
 @export var speed = 30.0
 @export var lifetime = 10.0
@@ -17,13 +17,15 @@ func _ready():
 	add_child(timer)
 	timer.start()
 	
-	# Area3Dの衝突検出を有効にする
-	body_entered.connect(_on_body_entered)
-	area_entered.connect(_on_area_entered)
+	# RigidBody3Dでは_integrate_forcesで衝突検出
 	
 	# 衝突レイヤーを設定（弾丸レイヤー）
 	collision_layer = 4  # layer 3 (Projectiles)
 	collision_mask = 3   # layer 1 (Player) + layer 2 (Environment)
+	
+	# RigidBody3Dの設定
+	gravity_scale = 1.0
+	continuous_cd = true  # 連続衝突検出を有効化
 	
 	print("Bullet initialized - collision_layer: ", collision_layer, " collision_mask: ", collision_mask)
 
@@ -31,15 +33,9 @@ func _physics_process(delta):
 	# 地面の下に落ちすぎたら削除
 	if global_position.y < -50:
 		queue_free()
-	
-	# 弾丸を移動させる
-	if direction != Vector3.ZERO:
-		# 重力を追加
-		direction.y -= 9.8 * delta
-		global_position += direction * speed * delta
 
 func set_velocity(dir: Vector3):
-	direction = dir
+	linear_velocity = dir * speed
 
 func _on_lifetime_timeout():
 	queue_free()
@@ -54,7 +50,15 @@ func set_bullet_color(color: Color):
 
 var has_hit = false  # 一度だけヒット処理をするフラグ
 
-func _on_body_entered(body):
+func _integrate_forces(state):
+	# 衝突を検出
+	for i in range(state.get_contact_count()):
+		var contact = state.get_contact_collider_object(i)
+		if contact and not has_hit:
+			_handle_collision(contact)
+			break
+
+func _handle_collision(body):
 	if has_hit:  # すでにヒット処理済みなら無視
 		return
 		
@@ -79,17 +83,11 @@ func _on_body_entered(body):
 		print("Successfully dealt ", damage, " damage to ", body.name)
 		
 		# 弾丸を削除
-		queue_free()
+		call_deferred("queue_free")
 	# 地面や壁に当たった場合
 	elif not body.name.begins_with("Bullet"):
 		print("Bullet hit environment object: ", body.name, " - destroying bullet")
-		queue_free()
+		call_deferred("queue_free")
 	else:
 		print("Bullet hit another bullet - ignoring")
 		has_hit = false  # 弾同士の衝突の場合はフラグをリセット
-
-func _on_area_entered(area):
-	print("Bullet hit area: ", area.name)
-	# Areaとの衝突でも弾丸を削除
-	if not area.name.begins_with("Bullet"):
-		queue_free()
