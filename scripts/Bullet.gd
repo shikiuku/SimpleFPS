@@ -5,6 +5,7 @@ extends RigidBody3D
 @export var damage = 25  # 1発25ダメージ（4発で倒せる）
 
 var direction = Vector3.ZERO
+@onready var mesh_instance = $MeshInstance3D
 
 func _ready():
 	# 一定時間後に削除
@@ -32,6 +33,14 @@ func set_velocity(dir: Vector3):
 
 func _on_lifetime_timeout():
 	queue_free()
+
+# プレイヤーの色に合わせて弾丸の色を設定
+func set_bullet_color(color: Color):
+	if mesh_instance:
+		var material = StandardMaterial3D.new()
+		material.albedo_color = color
+		material.emission = color * 0.3  # 少し光らせる
+		mesh_instance.set_surface_override_material(0, material)
 
 func _on_body_entered(body):
 	print("Bullet hit: ", body.name)

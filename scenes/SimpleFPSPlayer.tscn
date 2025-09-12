@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bnyfaiemymgp7"]
+[gd_scene load_steps=7 format=3 uid="uid://bnyfaiemymgp7"]
 
 [ext_resource type="Script" uid="uid://b7wkedjugh08i" path="res://scripts/SimpleFPSController.gd" id="1_abc123"]
 

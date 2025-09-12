@@ -384,9 +384,10 @@ func shoot():
 	# 射撃位置と方向を計算
 	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
 	var shoot_direction = -camera.global_transform.basis.z
+	var shooter_id = name.to_int()
 	
-	# ローカルで弾丸を生成
-	_spawn_bullet(shoot_position, shoot_direction)
+	# ローカルで弾丸を生成（自分の色）
+	_spawn_bullet(shoot_position, shoot_direction, shooter_id)
 	
 	# 他のプレイヤーにも弾丸を生成させる
 	var current_peers = multiplayer.get_peers()
@@ -395,16 +396,24 @@ func shoot():
 		for peer_id in current_peers:
 			var peer_node = get_parent().get_node_or_null(str(peer_id))
 			if peer_node != null and peer_node.is_inside_tree():
-				spawn_bullet_remote.rpc_id(peer_id, shoot_position, shoot_direction)
+				spawn_bullet_remote.rpc_id(peer_id, shoot_position, shoot_direction, shooter_id)
 			else:
 				print("WARN: Cannot send bullet RPC - Peer node not found (ID: ", peer_id, ")")
 
 # 弾丸を実際に生成する関数
-func _spawn_bullet(position: Vector3, direction: Vector3):
+func _spawn_bullet(position: Vector3, direction: Vector3, player_id: int = -1):
 	var bullet = bullet_scene.instantiate()
 	get_parent().add_child(bullet)
 	bullet.global_position = position
 	bullet.set_velocity(direction)
+	
+	# プレイヤーの色に合わせて弾丸の色を設定
+	var bullet_player_id = player_id
+	if bullet_player_id == -1:
+		bullet_player_id = name.to_int()  # 自分のIDを使用
+	
+	var player_color = get_player_color(bullet_player_id)
+	bullet.set_bullet_color(player_color)
 
 # RPC関数：位置同期を受信
 @rpc("any_peer", "unreliable")
@@ -421,11 +430,11 @@ func update_remote_position(new_position: Vector3, new_rotation_y: float, new_ro
 
 # RPC関数：他のプレイヤーの弾丸を生成
 @rpc("any_peer", "reliable")
-func spawn_bullet_remote(position: Vector3, direction: Vector3):
+func spawn_bullet_remote(position: Vector3, direction: Vector3, shooter_id: int):
 	# ノードがシーンツリーに正しく存在することを確認
 	if is_inside_tree():
-		# 他のプレイヤーの弾丸を生成
-		_spawn_bullet(position, direction)
+		# 他のプレイヤーの弾丸を生成（射撃者の色で）
+		_spawn_bullet(position, direction, shooter_id)
 	else:
 		print("ERROR: Received bullet RPC for node not in tree: ", name)
 
