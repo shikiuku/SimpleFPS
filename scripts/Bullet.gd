@@ -25,7 +25,7 @@ func _ready():
 	collision_mask = 3   # layer 1 (Player = bit 0) + layer 2 (Environment = bit 1)
 	
 	# RigidBody3Dの設定
-	gravity_scale = 1.0
+	gravity_scale = 0.0   # FPSゲームでは弾丸は重力の影響を受けない
 	continuous_cd = true  # 連続衝突検出を有効化
 	
 	print("Bullet initialized - collision_layer: ", collision_layer, " collision_mask: ", collision_mask)
