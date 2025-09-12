@@ -20,6 +20,12 @@ var current_x_rotation = 0.0  # 垂直回転
 # 弾丸のプリロード
 var bullet_scene = preload("res://scenes/Bullet.tscn")
 
+# HPシステム
+@export var max_health = 100
+var current_health = 100
+var is_dead = false
+var respawn_timer: Timer = null
+
 # モバイル入力関連
 var mobile_movement = Vector2.ZERO
 var mobile_ui: Control = null
@@ -39,6 +45,10 @@ func _ready():
 	# 視点回転の初期値を設定
 	current_y_rotation = rotation.y
 	current_x_rotation = camera.rotation.x
+	
+	# HPシステムの初期化
+	current_health = max_health
+	is_dead = false
 	
 	# MultiplayerSynchronizerの設定
 	call_deferred("setup_multiplayer")
@@ -184,6 +194,10 @@ func _is_touch_device() -> bool:
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
+		# 死亡中は物理処理をスキップ
+		if is_dead:
+			return
+			
 		# 自分のプレイヤーのみ物理処理を行う
 		handle_movement(delta)
 		
@@ -255,6 +269,10 @@ func handle_movement(delta):
 	move_and_slide()
 
 func shoot():
+	# 死亡中は射撃できない
+	if is_dead:
+		return
+		
 	# 射撃位置と方向を計算
 	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
 	var shoot_direction = -camera.global_transform.basis.z
@@ -301,3 +319,64 @@ func spawn_bullet_remote(position: Vector3, direction: Vector3):
 		_spawn_bullet(position, direction)
 	else:
 		print("ERROR: Received bullet RPC for node not in tree: ", name)
+
+# HPシステム関数群
+func take_damage(amount: int):
+	if is_dead:
+		return
+	
+	current_health -= amount
+	print("Player ", name, " took ", amount, " damage. Health: ", current_health)
+	
+	if current_health <= 0:
+		die()
+
+func die():
+	if is_dead:
+		return
+		
+	is_dead = true
+	current_health = 0
+	print("Player ", name, " died!")
+	
+	# プレイヤーを無効化
+	set_physics_process(false)
+	visible = false
+	
+	# 3秒後にリスポーン
+	respawn_timer = Timer.new()
+	respawn_timer.wait_time = 3.0
+	respawn_timer.one_shot = true
+	respawn_timer.timeout.connect(respawn)
+	add_child(respawn_timer)
+	respawn_timer.start()
+	
+	print("Respawn timer started - 3 seconds until respawn")
+
+func respawn():
+	print("Player ", name, " respawning...")
+	
+	# HPを回復
+	current_health = max_health
+	is_dead = false
+	
+	# プレイヤーを再有効化
+	set_physics_process(true)
+	visible = true
+	
+	# スポーン位置にリセット（今は元の位置に戻す）
+	global_position = Vector3(0, 2, 0)
+	velocity = Vector3.ZERO
+	
+	# タイマーを削除
+	if respawn_timer:
+		respawn_timer.queue_free()
+		respawn_timer = null
+	
+	print("Player ", name, " respawned with full health")
+
+func get_health() -> int:
+	return current_health
+
+func get_max_health() -> int:
+	return max_health

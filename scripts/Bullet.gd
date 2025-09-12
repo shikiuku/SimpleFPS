@@ -2,6 +2,7 @@ extends RigidBody3D
 
 @export var speed = 30.0
 @export var lifetime = 10.0
+@export var damage = 25  # 1発25ダメージ（4発で倒せる）
 
 var direction = Vector3.ZERO
 
@@ -16,6 +17,9 @@ func _ready():
 	
 	# 重力を有効にする
 	gravity_scale = 1.0
+	
+	# 衝突検出を有効にする
+	body_entered.connect(_on_body_entered)
 
 func _physics_process(_delta):
 	# 地面の下に落ちすぎたら削除
@@ -28,3 +32,18 @@ func set_velocity(dir: Vector3):
 
 func _on_lifetime_timeout():
 	queue_free()
+
+func _on_body_entered(body):
+	print("Bullet hit: ", body.name)
+	
+	# プレイヤーに当たった場合
+	if body.has_method("take_damage"):
+		body.take_damage(damage)
+		print("Dealt ", damage, " damage to ", body.name)
+		
+		# 弾丸を削除
+		queue_free()
+	# 地面や壁に当たった場合
+	elif not body.name.begins_with("Bullet"):
+		print("Bullet hit environment: ", body.name)
+		queue_free()

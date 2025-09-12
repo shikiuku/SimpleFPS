@@ -1,6 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://n76h3g6o3b5k"]
-
-[ext_resource type="Script" uid="uid://dh1yibwnvob16" path="res://scripts/MobileUI.gd" id="1_mobile"]
+[gd_scene load_steps=7 format=3 uid="uid://bphrckcjj58b3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_joystick_base"]
 bg_color = Color(0, 0, 0, 0.4)
@@ -65,7 +63,6 @@ corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
 [node name="MobileUI" type="CanvasLayer"]
-script = ExtResource("1_mobile")
 
 [node name="JoystickVisual" type="Control" parent="."]
 layout_mode = 3
