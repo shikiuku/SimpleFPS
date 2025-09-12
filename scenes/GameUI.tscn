@@ -1,10 +1,16 @@
-[gd_scene load_steps=3 format=3 uid="uid://c8e2377ae56r5"]
+[gd_scene load_steps=4 format=3 uid="uid://c8e2377ae56r5"]
 
 [ext_resource type="Script" uid="uid://c8gq6mxd1jt8k" path="res://scripts/GameUI.gd" id="1_gameui"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_1"]
 font_size = 14
 font_color = Color(1, 1, 1, 0.8)
+
+[sub_resource type="LabelSettings" id="LabelSettings_Health"]
+font_size = 18
+font_color = Color(1, 0.2, 0.2, 1)
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
 
 [node name="GameUI" type="CanvasLayer"]
 script = ExtResource("1_gameui")
@@ -34,8 +40,8 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 10.0
-offset_top = -40.0
-offset_right = 150.0
+offset_top = -50.0
+offset_right = 200.0
 offset_bottom = -10.0
-text = "HP: 100/100"
-label_settings = SubResource("LabelSettings_1")
+text = "♥ HP: 100/100"
+label_settings = SubResource("LabelSettings_Health")
