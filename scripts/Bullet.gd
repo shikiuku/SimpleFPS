@@ -1,4 +1,4 @@
-extends RigidBody3D
+extends Area3D
 
 @export var speed = 30.0
 @export var lifetime = 10.0
@@ -17,34 +17,29 @@ func _ready():
 	add_child(timer)
 	timer.start()
 	
-	# 重力を有効にする
-	gravity_scale = 1.0
+	# Area3Dの衝突検出を有効にする
+	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	
 	# 衝突レイヤーを設定（弾丸レイヤー）
 	collision_layer = 4  # layer 3 (Projectiles)
 	collision_mask = 3   # layer 1 (Player) + layer 2 (Environment)
 	
-	# contact monitoring を有効にする
-	contact_monitor = true
-	max_contacts_reported = 10
-	
 	print("Bullet initialized - collision_layer: ", collision_layer, " collision_mask: ", collision_mask)
 
-func _physics_process(_delta):
+func _physics_process(delta):
 	# 地面の下に落ちすぎたら削除
 	if global_position.y < -50:
 		queue_free()
 	
-	# 衝突を確認
-	if contact_monitor:
-		var contacts = get_colliding_bodies()
-		if contacts.size() > 0:
-			for contact in contacts:
-				_handle_collision(contact)
+	# 弾丸を移動させる
+	if direction != Vector3.ZERO:
+		# 重力を追加
+		direction.y -= 9.8 * delta
+		global_position += direction * speed * delta
 
 func set_velocity(dir: Vector3):
 	direction = dir
-	linear_velocity = direction * speed
 
 func _on_lifetime_timeout():
 	queue_free()
@@ -59,7 +54,7 @@ func set_bullet_color(color: Color):
 
 var has_hit = false  # 一度だけヒット処理をするフラグ
 
-func _handle_collision(body):
+func _on_body_entered(body):
 	if has_hit:  # すでにヒット処理済みなら無視
 		return
 		
@@ -92,3 +87,9 @@ func _handle_collision(body):
 	else:
 		print("Bullet hit another bullet - ignoring")
 		has_hit = false  # 弾同士の衝突の場合はフラグをリセット
+
+func _on_area_entered(area):
+	print("Bullet hit area: ", area.name)
+	# Areaとの衝突でも弾丸を削除
+	if not area.name.begins_with("Bullet"):
+		queue_free()
