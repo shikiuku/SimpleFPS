@@ -178,8 +178,9 @@ func setup_game_ui():
 		print("GameUI added to scene")
 
 func _on_mobile_move_input(direction: Vector2):
-	mobile_movement = direction
-	print("Mobile move input: ", direction)
+	if is_multiplayer_authority():
+		mobile_movement = direction
+		print("Mobile move input received - direction: ", direction, " Authority: ", get_multiplayer_authority())
 
 # シンプルUI用の視点操作処理
 func _on_mobile_view_input(delta: Vector2):
@@ -249,8 +250,8 @@ func _input(event):
 			rotation.y = current_y_rotation
 			camera.rotation.x = current_x_rotation
 	
-	# PC用の射撃操作
-	if event.is_action_pressed("shootAction") and not _is_mobile_platform():
+	# PC用の射撃操作（タッチデバイスでは無効）
+	if event.is_action_pressed("shootAction") and not _is_touch_device():
 		shoot()
 	
 	# ESCキーでマウスモード切り替え（PC環境のみ）
@@ -340,13 +341,13 @@ func handle_movement(delta):
 	if not is_on_floor():
 		velocity.y += get_gravity().y * delta
 	
-	# ジャンプ処理（PC: スペース / モバイル: ボタン）
+	# ジャンプ処理（PC: スペース / タッチデバイス: ボタン）
 	var should_jump = false
-	if not _is_mobile_platform():
+	if not _is_touch_device():
 		# PC環境：スペースキー
 		should_jump = Input.is_action_pressed("jump") and is_on_floor()
 	else:
-		# モバイル環境：ボタン
+		# タッチデバイス環境：ボタン
 		should_jump = mobile_jump_requested and is_on_floor()
 		
 	if should_jump:
@@ -356,18 +357,20 @@ func handle_movement(delta):
 	# 移動入力を取得
 	var input_dir = Vector2.ZERO
 	
-	if not _is_mobile_platform():
+	if not _is_touch_device():
 		# PC環境：WASD入力
 		input_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
 		input_dir.y = Input.get_action_strength("move_backward") - Input.get_action_strength("move_forward")
 	else:
-		# モバイル環境：ジョイスティック入力
-		if mobile_movement != Vector2.ZERO:
-			input_dir = mobile_movement
+		# タッチデバイス環境：ジョイスティック入力
+		input_dir = mobile_movement
+		# デバッグ出力を追加（頻度を下げる）
+		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
+			print("Touch device movement - mobile_movement: ", mobile_movement, " input_dir: ", input_dir)
 	
 	# 移動速度を決定
 	var current_speed = walk_speed
-	if not _is_mobile_platform() and Input.is_action_pressed("run"):
+	if not _is_touch_device() and Input.is_action_pressed("run"):
 		current_speed = run_speed
 	
 	# プレイヤーの向きに基づいて移動方向を計算
