@@ -426,8 +426,13 @@ func _spawn_bullet(position: Vector3, direction: Vector3, player_id: int = -1):
 	if bullet_player_id == -1:
 		bullet_player_id = name.to_int()  # 自分のIDを使用
 	
+	# 射撃者IDを設定（重要：ダメージ処理で使用）
+	bullet.shooter_id = bullet_player_id
+	
 	var player_color = get_player_color(bullet_player_id)
 	bullet.set_bullet_color(player_color)
+	
+	print("Spawned bullet - Shooter ID: ", bullet_player_id, " Color: ", get_color_name(player_color))
 
 # RPC関数：位置同期を受信
 @rpc("any_peer", "unreliable")
@@ -454,14 +459,22 @@ func spawn_bullet_remote(position: Vector3, direction: Vector3, shooter_id: int)
 
 # HPシステム関数群
 func take_damage(amount: int):
+	print("=== TAKE DAMAGE CALLED ===")
+	print("Player: ", name, " is_dead: ", is_dead, " current_health: ", current_health)
+	print("Damage amount: ", amount)
+	
 	if is_dead:
+		print("Player is already dead - ignoring damage")
 		return
 	
 	current_health -= amount
-	print("Player ", name, " took ", amount, " damage. Health: ", current_health)
+	print("Player ", name, " took ", amount, " damage. Health: ", current_health, "/", max_health)
 	
 	if current_health <= 0:
+		print("Player health reached 0 - calling die()")
 		die()
+	else:
+		print("Player still alive with ", current_health, " HP")
 
 func die():
 	if is_dead:
