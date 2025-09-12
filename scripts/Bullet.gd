@@ -20,9 +20,6 @@ func _ready():
 	# 重力を有効にする
 	gravity_scale = 1.0
 	
-	# 衝突検出を有効にする
-	body_entered.connect(_on_body_entered)
-	
 	# 衝突レイヤーを設定（弾丸レイヤー）
 	collision_layer = 4  # layer 3 (Projectiles)
 	collision_mask = 3   # layer 1 (Player) + layer 2 (Environment)
@@ -30,11 +27,20 @@ func _ready():
 	# contact monitoring を有効にする
 	contact_monitor = true
 	max_contacts_reported = 10
+	
+	print("Bullet initialized - collision_layer: ", collision_layer, " collision_mask: ", collision_mask)
 
 func _physics_process(_delta):
 	# 地面の下に落ちすぎたら削除
 	if global_position.y < -50:
 		queue_free()
+	
+	# 衝突を確認
+	if contact_monitor:
+		var contacts = get_colliding_bodies()
+		if contacts.size() > 0:
+			for contact in contacts:
+				_handle_collision(contact)
 
 func set_velocity(dir: Vector3):
 	direction = dir
@@ -51,11 +57,18 @@ func set_bullet_color(color: Color):
 		material.emission = color * 0.3  # 少し光らせる
 		mesh_instance.set_surface_override_material(0, material)
 
-func _on_body_entered(body):
+var has_hit = false  # 一度だけヒット処理をするフラグ
+
+func _handle_collision(body):
+	if has_hit:  # すでにヒット処理済みなら無視
+		return
+		
 	print("=== BULLET HIT ===")
 	print("Bullet hit body: ", body.name, " (Type: ", body.get_class(), ")")
 	print("Shooter ID: ", shooter_id, " Hit body name: ", body.name)
 	print("Body has take_damage method: ", body.has_method("take_damage"))
+	
+	has_hit = true  # ヒット処理済みフラグを立てる
 	
 	# プレイヤーに当たった場合
 	if body.has_method("take_damage"):
@@ -63,6 +76,7 @@ func _on_body_entered(body):
 		var hit_player_id = body.name.to_int()
 		if shooter_id == hit_player_id:
 			print("Bullet hit shooter (", shooter_id, ") - ignoring self damage")
+			has_hit = false  # 自分の弾の場合はフラグをリセット
 			return
 		
 		print("Calling take_damage with ", damage, " damage on ", body.name)
@@ -77,3 +91,4 @@ func _on_body_entered(body):
 		queue_free()
 	else:
 		print("Bullet hit another bullet - ignoring")
+		has_hit = false  # 弾同士の衝突の場合はフラグをリセット

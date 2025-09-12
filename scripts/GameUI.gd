@@ -5,7 +5,7 @@ extends CanvasLayer
 @onready var health_label = $HealthLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.37"
+const VERSION = "v1.7.38"
 
 func _ready():
 	# バージョンを表示
