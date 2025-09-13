@@ -431,6 +431,9 @@ func handle_movement(delta):
 
 	# 物理移動実行
 	move_and_slide()
+	
+	# 拾える弾をチェック（プレイヤーの当たり判定を拡大して検出）
+	check_nearby_pickable_bullets()
 
 func shoot():
 	# 死亡中は射撃できない
@@ -709,3 +712,36 @@ func add_ammo(amount: int):
 	current_ammo = min(current_ammo + amount, max_ammo)
 	print("Added ", amount, " ammo. Current ammo: ", current_ammo, "/", max_ammo)
 	update_ammo_display()
+
+# 近くの拾える弾をチェックする関数（プレイヤーの当たり判定を拡大）
+func check_nearby_pickable_bullets():
+	# 自分のプレイヤーでない場合は拾わない
+	if not is_multiplayer_authority():
+		return
+	
+	# PhysicsサーバーでSphereシェイプを使って周辺の弾を検索
+	var space_state = get_world_3d().direct_space_state
+	var query = PhysicsShapeQueryParameters3D.new()
+	
+	# 球形の検出範囲を作成（プレイヤーの当たり判定を拡大）
+	var shape = SphereShape3D.new()
+	shape.radius = 1.5  # プレイヤーの周辺1.5メートル以内
+	query.shape = shape
+	query.transform = Transform3D(Basis(), global_position)
+	
+	# 拾い物レイヤー（layer 8）のみを検出
+	query.collision_mask = 8  # bit 3 = 8
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	
+	# 重複検出
+	var results = space_state.intersect_shape(query)
+	
+	# 見つかった弾を処理
+	for result in results:
+		var body = result["collider"]
+		if body and body.has_method("_handle_collision") and body.get("is_pickable"):
+			# 弾が拾える状態の場合、弾の衝突処理を呼び出す
+			print("Player detected pickable bullet: ", body.name, " at distance: ", global_position.distance_to(body.global_position))
+			body._handle_collision(self)
+			break  # 一度に1つずつ拾う
