@@ -63,6 +63,10 @@ func _ready():
 	current_health = max_health
 	is_dead = false
 	
+	# リスポーン処理をチェック（死亡シーンから戻ってきた場合）
+	if RespawnManager.should_respawn and is_multiplayer_authority():
+		call_deferred("handle_respawn_return")
+	
 	# MultiplayerSynchronizerの設定
 	call_deferred("setup_multiplayer")
 	
@@ -494,19 +498,38 @@ func die():
 	current_health = 0
 	print("Player ", name, " died!")
 	
-	# プレイヤーを無効化
-	set_physics_process(false)
-	visible = false
-	
-	# 3秒後にリスポーン
-	respawn_timer = Timer.new()
-	respawn_timer.wait_time = 3.0
-	respawn_timer.one_shot = true
-	respawn_timer.timeout.connect(respawn)
-	add_child(respawn_timer)
-	respawn_timer.start()
-	
-	print("Respawn timer started - 3 seconds until respawn")
+	# ローカルプレイヤーのみ死亡シーンに切り替え
+	if is_multiplayer_authority():
+		# 現在のシーンパスを保存
+		var current_scene_path = get_tree().current_scene.scene_file_path
+		if current_scene_path == "":
+			current_scene_path = "res://scenes/TestLevel.tscn"  # フォールバック
+		
+		print("Switching to death scene - current scene: ", current_scene_path)
+		
+		# 死亡シーンに切り替える前に現在のシーンパスを保存
+		var death_scene = preload("res://scenes/DeathScene.tscn")
+		var death_instance = death_scene.instantiate()
+		death_instance.set_original_scene(current_scene_path)
+		
+		# シーンを切り替え
+		get_tree().current_scene.queue_free()
+		get_tree().root.add_child(death_instance)
+		get_tree().current_scene = death_instance
+	else:
+		# リモートプレイヤーは従来通りの処理
+		set_physics_process(false)
+		visible = false
+		
+		# 3秒後にリスポーン
+		respawn_timer = Timer.new()
+		respawn_timer.wait_time = 3.0
+		respawn_timer.one_shot = true
+		respawn_timer.timeout.connect(respawn)
+		add_child(respawn_timer)
+		respawn_timer.start()
+		
+		print("Remote player death - respawn timer started")
 
 func respawn():
 	print("Player ", name, " respawning...")
@@ -535,3 +558,24 @@ func get_health() -> int:
 
 func get_max_health() -> int:
 	return max_health
+
+# 死亡シーンから戻ってきた時のリスポーン処理
+func handle_respawn_return():
+	print("Player returned from death scene - performing respawn")
+	
+	# HPを完全回復
+	current_health = max_health
+	is_dead = false
+	
+	# スポーン位置にリセット
+	global_position = RespawnManager.get_respawn_position()
+	velocity = Vector3.ZERO
+	
+	# プレイヤーを有効化
+	set_physics_process(true)
+	visible = true
+	
+	# リスポーンフラグをクリア
+	RespawnManager.clear_respawn_flag()
+	
+	print("Player respawned successfully at position: ", global_position)
