@@ -3,9 +3,10 @@ extends CanvasLayer
 @onready var version_label = $VersionLabel
 @onready var player_count_label = $PlayerCountLabel
 @onready var health_label = $HealthLabel
+@onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.48"
+const VERSION = "v1.7.49"
 
 func _ready():
 	# バージョンを表示
@@ -114,3 +115,80 @@ func get_local_player():
 				return grandchild
 	
 	return null
+
+# キル通知を表示する関数
+func show_kill_notification(killer_color: String, victim_color: String):
+	if not kill_notification_label:
+		print("ERROR: KillNotificationLabel not found!")
+		return
+	
+	# キル通知メッセージを作成
+	var message = killer_color + " killed " + victim_color
+	kill_notification_label.text = message
+	kill_notification_label.visible = true
+	
+	# 色を設定（キラーの色を使用）
+	var notification_color = get_color_from_name(killer_color)
+	kill_notification_label.modulate = notification_color
+	
+	print("Kill notification displayed: ", message)
+	
+	# 3秒後に非表示にする
+	var timer = Timer.new()
+	timer.wait_time = 3.0
+	timer.one_shot = true
+	timer.timeout.connect(_hide_kill_notification)
+	add_child(timer)
+	timer.start()
+
+# ダメージ通知を表示する関数
+func show_damage_notification(attacker_color: String, victim_color: String, damage: int, remaining_hp: int):
+	if not kill_notification_label:
+		print("ERROR: KillNotificationLabel not found!")
+		return
+	
+	# ダメージ通知メッセージを作成
+	var message = attacker_color + " hit " + victim_color + " (-" + str(damage) + " HP: " + str(remaining_hp) + ")"
+	kill_notification_label.text = message
+	kill_notification_label.visible = true
+	
+	# 色を設定（攻撃者の色を使用）
+	var notification_color = get_color_from_name(attacker_color)
+	kill_notification_label.modulate = notification_color
+	
+	print("Damage notification displayed: ", message)
+	
+	# 2秒後に非表示にする（キル通知より短め）
+	var timer = Timer.new()
+	timer.wait_time = 2.0
+	timer.one_shot = true
+	timer.timeout.connect(_hide_kill_notification)
+	add_child(timer)
+	timer.start()
+
+func _hide_kill_notification():
+	if kill_notification_label:
+		kill_notification_label.visible = false
+		kill_notification_label.text = ""
+
+# 色名から実際の色を取得
+func get_color_from_name(color_name: String) -> Color:
+	match color_name:
+		"RED":
+			return Color.RED
+		"BLUE":
+			return Color.BLUE
+		"GREEN":
+			return Color.GREEN
+		"YELLOW":
+			return Color.YELLOW
+		"MAGENTA":
+			return Color.MAGENTA
+		"CYAN":
+			return Color.CYAN
+		"ORANGE":
+			return Color.ORANGE
+		"PURPLE":
+			return Color.PURPLE
+		_:
+			return Color.WHITE

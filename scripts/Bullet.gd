@@ -145,8 +145,21 @@ func _handle_collision(body):
 		
 		print("=== DEALING DAMAGE ===")
 		print("Calling take_damage with ", damage, " damage on ", body.name)
+		
+		# ダメージを与える前にHPをチェック（キル判定のため）
+		var victim_health_before = body.get_health()
+		var victim_will_die = (victim_health_before - damage) <= 0
+		
 		body.take_damage(damage)
 		print("Successfully dealt ", damage, " damage to ", body.name)
+		
+		# キル判定 - 被害者が死亡した場合
+		if victim_will_die:
+			show_kill_notification(shooter_id, hit_player_id)
+		else:
+			# キルではない場合、ダメージ通知を表示
+			var victim_health_after = body.get_health()
+			show_damage_notification(shooter_id, hit_player_id, damage, victim_health_after)
 		
 		# 弾丸を削除
 		call_deferred("queue_free")
@@ -158,3 +171,64 @@ func _handle_collision(body):
 	else:
 		print("Bullet hit another bullet - ignoring")
 		has_hit = false  # 弾同士の衝突の場合はフラグをリセット
+
+# キル通知を表示する関数
+func show_kill_notification(killer_id: int, victim_id: int):
+	print("=== KILL NOTIFICATION ===")
+	print("Killer ID: ", killer_id, " Victim ID: ", victim_id)
+	
+	# GameUIを取得
+	var current_scene = get_tree().current_scene
+	var game_ui = current_scene.get_node_or_null("GameUI")
+	
+	if not game_ui:
+		print("ERROR: GameUI not found - cannot show kill notification")
+		return
+	
+	# プレイヤーの色名を取得
+	var killer_color = get_player_color_name(killer_id)
+	var victim_color = get_player_color_name(victim_id)
+	
+	print("Kill notification: ", killer_color, " killed ", victim_color)
+	
+	# GameUIのキル通知機能を呼び出し
+	game_ui.show_kill_notification(killer_color, victim_color)
+
+# ダメージ通知を表示する関数
+func show_damage_notification(attacker_id: int, victim_id: int, damage_amount: int, remaining_hp: int):
+	print("=== DAMAGE NOTIFICATION ===")
+	print("Attacker ID: ", attacker_id, " Victim ID: ", victim_id, " Damage: ", damage_amount, " HP: ", remaining_hp)
+	
+	# GameUIを取得
+	var current_scene = get_tree().current_scene
+	var game_ui = current_scene.get_node_or_null("GameUI")
+	
+	if not game_ui:
+		print("ERROR: GameUI not found - cannot show damage notification")
+		return
+	
+	# プレイヤーの色名を取得
+	var attacker_color = get_player_color_name(attacker_id)
+	var victim_color = get_player_color_name(victim_id)
+	
+	print("Damage notification: ", attacker_color, " hit ", victim_color, " (-", damage_amount, " HP: ", remaining_hp, ")")
+	
+	# GameUIのダメージ通知機能を呼び出し
+	game_ui.show_damage_notification(attacker_color, victim_color, damage_amount, remaining_hp)
+
+# プレイヤーIDから色名を取得する関数
+func get_player_color_name(player_id: int) -> String:
+	# SimpleFPSControllerと同じ色配列を使用
+	var color_names = [
+		"RED",      # 赤
+		"BLUE",     # 青  
+		"GREEN",    # 緑
+		"YELLOW",   # 黄
+		"MAGENTA",  # マゼンタ
+		"CYAN",     # シアン
+		"ORANGE",   # オレンジ
+		"PURPLE"    # 紫
+	]
+	
+	var color_index = player_id % color_names.size()
+	return color_names[color_index]
