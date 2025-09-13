@@ -3,7 +3,7 @@ extends RigidBody3D
 @export var speed = 30.0
 @export var lifetime = 30.0  # 30秒に延長
 @export var damage = 25  # 1発25ダメージ（4発で倒せる）
-@export var fade_start_time = 10.0  # 10秒後からフェード開始
+@export var fade_start_time = 4.0  # 4秒後からフェード開始
 
 var direction = Vector3.ZERO
 var shooter_id = -1  # 射撃者のID
@@ -81,7 +81,7 @@ func _physics_process(delta):
 	# 経過時間を更新
 	lifetime_timer += delta
 	
-	# 10秒経ったら一気に白くして拾えるようにする
+	# 4秒経ったら一気に白くして拾えるようにする
 	if lifetime_timer >= fade_start_time and not is_pickable:
 		# 一気に白くする
 		if mesh_instance:
@@ -98,7 +98,7 @@ func _physics_process(delta):
 		# 弾の当たり判定は元のまま（浮かないようにするため）
 		print("Bullet collision stays at original size to prevent floating")
 		
-		print("Bullet turned white instantly and is now pickable")
+		print("Bullet turned white instantly and is now pickable (after 4 seconds)")
 	
 	# レイキャスト衝突検出
 	if not has_hit and not is_pickable:  # 拾える状態になったら攻撃判定を無効化
