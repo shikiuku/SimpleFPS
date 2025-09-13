@@ -24,6 +24,15 @@ size = Vector3(1, 10, 122)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
 albedo_color = Color(0.5, 0.3, 0.2, 1)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_box"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_box"]
+albedo_color = Color(0.8, 0.4, 0.2, 1)
+
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_pillar"]
 height = 6.0
 radius = 0.509277
@@ -35,15 +44,6 @@ height = 6.0
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pillar"]
 albedo_color = Color(0.4, 0.4, 0.6, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_box"]
-size = Vector3(3, 3, 3)
-
-[sub_resource type="BoxMesh" id="BoxMesh_box"]
-size = Vector3(3, 3, 3)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_box"]
-albedo_color = Color(0.8, 0.4, 0.2, 1)
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -151,21 +151,6 @@ shape = SubResource("BoxShape3D_wall")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Wall_South"]
 mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
-
-[node name="CenterTower" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
-collision_layer = 2
-collision_mask = 0
-physics_material_override = SubResource("PhysicsMaterial_ground")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CenterTower"]
-transform = Transform3D(36.2923, 0, 0, 0, 0.698987, 0, 0, 0, 17.2862, -1.20347, -3.87935, -9.16366)
-shape = SubResource("CylinderShape3D_pillar")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CenterTower"]
-transform = Transform3D(18.4945, 0, 0, 0, 0.698987, 0, 0, 0, 8.63522, -1.10517, -3.87935, -9.19421)
-mesh = SubResource("CylinderMesh_pillar")
-surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
 
 [node name="Box1" type="StaticBody3D" parent="."]
 transform = Transform3D(40.3893, 0, 0, 0, 1, 0, 0, 0, 2.94321, 1.34224, 1.5, 16.6316)

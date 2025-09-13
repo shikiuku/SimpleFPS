@@ -43,10 +43,12 @@ var bullet_scene = preload("res://scenes/Bullet.tscn")
 
 # 銃の反動アニメーション関連
 var gun_original_position: Vector3
+var gun_original_rotation: Vector3  # 銃の元の回転位置
 var gun_recoil_tween: Tween
-const RECOIL_DISTANCE = -0.1  # 反動で後退する距離
-const RECOIL_DURATION = 0.08  # 反動の持続時間（秒）
-const RECOIL_RETURN_DURATION = 0.12  # 元の位置に戻る時間（秒）
+const RECOIL_DISTANCE = -0.3  # 反動で後退する距離（大幅に増加）
+const RECOIL_DURATION = 0.12  # 反動の持続時間（秒）
+const RECOIL_RETURN_DURATION = 0.18  # 元の位置に戻る時間（秒）
+const RECOIL_ROTATION = -0.15  # 反動の回転角度（ラジアン、約8.6度）
 
 # HPシステム
 @export var max_health = 100
@@ -109,8 +111,9 @@ func _ready():
 	# 銃の反動アニメーション初期化
 	if gun_model:
 		gun_original_position = gun_model.position
+		gun_original_rotation = gun_model.rotation  # 元の回転も保存
 		gun_recoil_tween = create_tween()
-		print("Gun recoil system initialized - Original position: ", gun_original_position)
+		print("Gun recoil system initialized - Original position: ", gun_original_position, " Original rotation: ", gun_original_rotation)
 	
 	# プレイヤー上部のHP表示を初期化
 	call_deferred("update_overhead_health_display")
@@ -577,27 +580,52 @@ func stop_dash():
 # 銃の反動アニメーション関数
 func play_gun_recoil():
 	if not gun_model:
+		print("ERROR: gun_model not found - cannot play recoil animation")
 		return
 	
-	print("Playing gun recoil animation")
+	print("Playing gun recoil animation - Original pos: ", gun_original_position, " Current pos: ", gun_model.position)
 	
 	# 既存のアニメーションを停止
 	if gun_recoil_tween:
 		gun_recoil_tween.kill()
 	
-	# 新しいTweenを作成
+	# 連射対策: 銃を強制的に元の位置に戻す（回転はカメラに合わせる）
+	gun_model.position = gun_original_position
+	# 銃の回転はカメラの上下回転に合わせる（視点移動でセットされた現在の回転を維持）
+	gun_model.rotation.x = current_x_rotation
+	
+	# 新しいTweenを作成（シーケンシャル）
 	gun_recoil_tween = create_tween()
-	gun_recoil_tween.set_parallel(true)  # パラレルモードを有効
 	
-	# 反動アニメーション：銃を後方に移動
-	var recoil_position = gun_original_position + Vector3(0, 0, RECOIL_DISTANCE)
+	# 反動アニメーション：銃のローカル座標で後ろ向きに移動
+	# カメラの回転に関係なく、常にZ軸正方向（後ろ向き）に反動
+	var recoil_direction = Vector3(0, 0, -RECOIL_DISTANCE)  # ローカル座標でZ軸後ろ向き
+	var recoil_position = gun_original_position + recoil_direction
+	print("Recoil animation - Local recoil direction: ", recoil_direction, " Moving to: ", recoil_position)
+	
+	# 現在のカメラ回転を基準に反動回転を計算（カメラの向きに合わせる）
+	var current_gun_rotation = gun_model.rotation
+	var recoil_rotation = Vector3(current_x_rotation + RECOIL_ROTATION, 0, 0)  # 現在のカメラ回転 + 約8.6度上向き
+	var return_rotation = Vector3(current_x_rotation, 0, 0)  # 元のカメラ回転に戻る
+	print("Recoil animation - Current rotation: ", current_gun_rotation, " Recoil rotation: ", recoil_rotation, " Return rotation: ", return_rotation)
+	
+	# 位置のアニメーション：後退 → 復帰（チェーン）
 	gun_recoil_tween.tween_property(gun_model, "position", recoil_position, RECOIL_DURATION)
-	gun_recoil_tween.tween_property(gun_model, "position", gun_original_position, RECOIL_DURATION + RECOIL_RETURN_DURATION)
+	gun_recoil_tween.tween_property(gun_model, "position", gun_original_position, RECOIL_RETURN_DURATION)
 	
-	# 少し上向きの反動も追加（リアルな感じ）
-	var recoil_rotation = gun_model.rotation + Vector3(-0.05, 0, 0)  # 5度上向き
-	gun_recoil_tween.tween_property(gun_model, "rotation", recoil_rotation, RECOIL_DURATION * 0.5)
-	gun_recoil_tween.tween_property(gun_model, "rotation", Vector3.ZERO, RECOIL_DURATION * 0.5 + RECOIL_RETURN_DURATION * 1.5)
+	# 回転用の別のTweenを作成（パラレル）- カメラの回転に合わせる
+	var rotation_tween = create_tween()
+	rotation_tween.tween_property(gun_model, "rotation", recoil_rotation, RECOIL_DURATION * 0.7)
+	rotation_tween.tween_property(gun_model, "rotation", return_rotation, RECOIL_RETURN_DURATION * 1.2)
+
+# 銃の色をリセットする関数
+func _reset_gun_color():
+	if gun_model:
+		# 元の灰色マテリアルに戻す
+		var original_material = StandardMaterial3D.new()
+		original_material.albedo_color = Color(0.3, 0.3, 0.3, 1)  # 元の灰色
+		gun_model.set_surface_override_material(0, original_material)
+		print("Gun color reset to original gray")
 
 func shoot():
 	# 死亡中は射撃できない
@@ -608,7 +636,13 @@ func shoot():
 	if current_ammo <= 0:
 		print("No ammo! Cannot shoot. Current ammo: ", current_ammo)
 		return
-		
+	
+	print("===== SHOOT FUNCTION CALLED =====")
+	print("Player: ", name, " Authority: ", is_multiplayer_authority())
+	
+	# 反動アニメーションを再生
+	play_gun_recoil()
+	
 	# 弾数を減らす
 	current_ammo -= 1
 	print("Shot fired! Ammo remaining: ", current_ammo, "/", max_ammo)
