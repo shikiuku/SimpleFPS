@@ -13,11 +13,11 @@ height = 1.8
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
 albedo_color = Color(0.2, 0.6, 1, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_ViewDirection"]
-size = Vector3(0.1, 0.1, 1.5)
+[sub_resource type="BoxMesh" id="BoxMesh_Gun"]
+size = Vector3(0.05, 0.1, 0.4)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ViewDirection"]
-albedo_color = Color(1, 1, 0, 0.8)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_Gun"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_1"]
 viewport_path = NodePath("HealthBarUI/SubViewport")
@@ -38,11 +38,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
 
 [node name="Camera3D" type="Camera3D" parent="CameraHolder"]
 
-[node name="ViewDirectionLine" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, -0.75)
-visible = false
-mesh = SubResource("BoxMesh_ViewDirection")
-surface_material_override/0 = SubResource("StandardMaterial3D_ViewDirection")
+[node name="GunModel" type="MeshInstance3D" parent="CameraHolder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, -0.2, -0.4)
+mesh = SubResource("BoxMesh_Gun")
+surface_material_override/0 = SubResource("StandardMaterial3D_Gun")
+
+[node name="GunTip" type="Node3D" parent="CameraHolder/GunModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
 
 [node name="HealthBarUI" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)

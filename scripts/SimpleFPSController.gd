@@ -5,6 +5,15 @@ extends CharacterBody3D
 @export var jump_velocity = 8.0
 @export var mouse_sensitivity = 0.002  # PC用マウス感度
 
+# ダッシュシステム
+@export var dash_speed = 20.0         # ダッシュ時の速度
+@export var dash_duration = 0.3      # ダッシュの持続時間（秒）
+@export var dash_charge_time = 3.0   # フルチャージまでの時間（秒）
+var dash_charge = 3.0                # 現在のダッシュチャージ量
+var is_dashing = false               # ダッシュ中かどうか
+var dash_timer = 0.0                 # ダッシュタイマー
+var dash_direction = Vector3.ZERO    # ダッシュ方向
+
 # 同期用プロパティ（RPC同期で使用）
 @export var sync_position := Vector3.ZERO
 @export var sync_rotation_y := 0.0
@@ -13,7 +22,8 @@ extends CharacterBody3D
 @onready var camera = $CameraHolder/Camera3D
 @onready var camera_holder = $CameraHolder
 @onready var mesh_instance = $MeshInstance3D
-@onready var view_direction_line = $ViewDirectionLine
+@onready var gun_model = $CameraHolder/GunModel
+@onready var gun_tip = $CameraHolder/GunModel/GunTip
 @onready var health_bar_ui = $HealthBarUI/SubViewport/HealthBarControl/PlayerHealthBar
 @onready var health_label_ui = $HealthBarUI/SubViewport/HealthBarControl/PlayerHealthBar/PlayerHealthLabel
 
@@ -38,6 +48,7 @@ var reload_timer: Timer = null
 # モバイル入力関連
 var mobile_movement = Vector2.ZERO
 var mobile_ui: Control = null
+var mobile_dash_requested = false
 
 func _ready():
 	# 衝突レイヤーを強制設定（.tscnファイルの設定が消える問題の対策）
@@ -73,6 +84,9 @@ func _ready():
 	# 弾数システムの初期化
 	current_ammo = max_ammo
 	setup_reload_timer()
+	
+	# ダッシュシステムの初期化
+	dash_charge = dash_charge_time  # フル充電状態でスタート
 	
 	# プレイヤー上部のHP表示を初期化
 	call_deferred("update_overhead_health_display")
@@ -116,8 +130,6 @@ func setup_multiplayer():
 		# Player1（サーバー側）は表示しない
 		if player_id == 1:
 			mesh_instance.visible = false
-			if view_direction_line:
-				view_direction_line.visible = false
 			# Player1のHP表示も非表示
 			if $HealthBarUI:
 				$HealthBarUI.visible = false
@@ -125,10 +137,6 @@ func setup_multiplayer():
 			return
 		
 		mesh_instance.visible = true
-		
-		# 視点方向ラインを表示（他プレイヤーのみ、Player1以外）
-		if view_direction_line:
-			view_direction_line.visible = true
 		
 		# 他のプレイヤーにはHP表示を表示
 		if $HealthBarUI:
@@ -141,12 +149,6 @@ func setup_multiplayer():
 		new_material.albedo_color = player_color
 		mesh_instance.set_surface_override_material(0, new_material)
 		
-		# 視点方向ラインも同じ色にする
-		if view_direction_line:
-			var line_material = StandardMaterial3D.new()
-			line_material.albedo_color = player_color
-			line_material.emission = player_color * 0.3  # 少し光らせる
-			view_direction_line.set_surface_override_material(0, line_material)
 		
 		print("Remote player initialized: ", name, " (", get_color_name(player_color), " - VISIBLE)")
 
@@ -206,6 +208,7 @@ func setup_mobile_ui():
 		mobile_ui.view_input.connect(_on_mobile_view_input)
 		mobile_ui.shoot_pressed.connect(_on_mobile_shoot)
 		mobile_ui.jump_pressed.connect(_on_mobile_jump)
+		mobile_ui.dash_pressed.connect(_on_mobile_dash)
 		
 		print("Mobile UI setup complete!")
 	else:
@@ -239,6 +242,9 @@ func _on_mobile_view_input(delta: Vector2):
 		# 実際の回転を適用
 		rotation.y = current_y_rotation
 		camera.rotation.x = current_x_rotation
+		# 銃の向きもカメラの上下回転に合わせる
+		if gun_model:
+			gun_model.rotation.x = current_x_rotation
 		
 		print("Camera rotation set - Y: ", current_y_rotation, " X: ", current_x_rotation)
 
@@ -257,6 +263,9 @@ func _on_mobile_look_input(delta: Vector2):
 		# 実際の回転を適用
 		rotation.y = current_y_rotation
 		camera.rotation.x = current_x_rotation
+		# 銃の向きもカメラの上下回転に合わせる
+		if gun_model:
+			gun_model.rotation.x = current_x_rotation
 		
 		print("Camera rotation set - Y: ", current_y_rotation, " X: ", current_x_rotation)
 
@@ -272,6 +281,11 @@ func _on_mobile_jump():
 	if is_multiplayer_authority():
 		print("Mobile jump triggered!")
 		mobile_jump_requested = true
+
+func _on_mobile_dash():
+	if is_multiplayer_authority():
+		print("Mobile dash triggered!")
+		mobile_dash_requested = true
 
 func _input(event):
 	# 自分のプレイヤーのみが入力を処理
@@ -291,10 +305,17 @@ func _input(event):
 			# 実際の回転を適用
 			rotation.y = current_y_rotation
 			camera.rotation.x = current_x_rotation
+			# 銃の向きもカメラの上下回転に合わせる
+			if gun_model:
+				gun_model.rotation.x = current_x_rotation
 	
 	# PC用の射撃操作（タッチデバイスでは無効）
 	if event.is_action_pressed("shootAction") and not _is_touch_device():
 		shoot()
+	
+	# PC用のダッシュ操作（Shiftキー、タッチデバイスでは無効）
+	if event.is_action_pressed("run") and not _is_touch_device():
+		try_dash()
 	
 	# ESCキーでマウスモード切り替え（PC環境のみ）
 	if event.is_action_pressed("ui_cancel") and not _is_mobile_platform():
@@ -338,7 +359,10 @@ func _physics_process(delta):
 		# 死亡中は物理処理をスキップ
 		if is_dead:
 			return
-			
+		
+		# ダッシュシステムの更新
+		update_dash_system(delta)
+		
 		# 自分のプレイヤーのみ物理処理を行う
 		handle_movement(delta)
 		
@@ -368,11 +392,6 @@ func _physics_process(delta):
 		global_position = global_position.lerp(sync_position, 0.1)
 		rotation.y = lerp_angle(rotation.y, sync_rotation_y, 0.1)
 		
-		# 視点方向ラインの向きを更新
-		if view_direction_line and view_direction_line.visible:
-			# 水平回転はプレイヤー全体と一緒に回転
-			# 垂直回転は視点方向ラインだけに適用
-			view_direction_line.rotation.x = sync_rotation_x
 		
 		# デバッグ: 同期データを受信していることを確認（頻度を下げる）
 		if Engine.get_process_frames() % 300 == 0:  # 5秒に1回
@@ -410,14 +429,32 @@ func handle_movement(delta):
 		if Engine.get_process_frames() % 60 == 0:  # 1秒に1回
 			print("Touch device movement - mobile_movement: ", mobile_movement, " input_dir: ", input_dir)
 	
+	# ダッシュ処理（PC・モバイル両対応）
+	var dash_requested = false
+	if not _is_touch_device():
+		# PC環境では何もしない（Shiftは走りで使用）
+		pass
+	else:
+		# タッチデバイス環境：ダッシュボタン
+		dash_requested = mobile_dash_requested
+		mobile_dash_requested = false  # リセット
+	
+	if dash_requested:
+		try_dash()
+	
 	# 移動速度を決定
 	var current_speed = walk_speed
-	if not _is_touch_device() and Input.is_action_pressed("run"):
+	if not _is_touch_device() and Input.is_action_pressed("run") and not is_dashing:
 		current_speed = run_speed
+	elif is_dashing:
+		current_speed = dash_speed
 	
 	# プレイヤーの向きに基づいて移動方向を計算
 	var direction = Vector3.ZERO
-	if input_dir != Vector2.ZERO:
+	if is_dashing:
+		# ダッシュ中は保存された方向を使用
+		direction = dash_direction
+	elif input_dir != Vector2.ZERO:
 		direction = global_basis * Vector3(input_dir.x, 0, input_dir.y)
 		direction = direction.normalized()
 	
@@ -426,14 +463,66 @@ func handle_movement(delta):
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
 	else:
-		velocity.x = move_toward(velocity.x, 0, current_speed * delta * 3)
-		velocity.z = move_toward(velocity.z, 0, current_speed * delta * 3)
+		if not is_dashing:
+			velocity.x = move_toward(velocity.x, 0, current_speed * delta * 3)
+			velocity.z = move_toward(velocity.z, 0, current_speed * delta * 3)
 
 	# 物理移動実行
 	move_and_slide()
 	
 	# 拾える弾をチェック（プレイヤーの当たり判定を拡大して検出）
 	check_nearby_pickable_bullets()
+
+# ダッシュシステム関数群
+func update_dash_system(delta):
+	# ダッシュチャージを回復（ダッシュ中でない時のみ）
+	if not is_dashing and dash_charge < dash_charge_time:
+		dash_charge = min(dash_charge + delta, dash_charge_time)
+	
+	# ダッシュタイマー更新
+	if is_dashing:
+		dash_timer += delta
+		if dash_timer >= dash_duration:
+			stop_dash()
+	
+	# ダッシュチャージのUI更新
+	update_dash_display()
+
+func try_dash():
+	# 死亡中、ダッシュ中、チャージが足りない場合は実行しない
+	if is_dead or is_dashing or dash_charge < dash_charge_time:
+		return
+	
+	# 現在の移動方向を取得
+	var input_dir = Vector2.ZERO
+	if not _is_touch_device():
+		# PC環境：WASD入力
+		input_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+		input_dir.y = Input.get_action_strength("move_backward") - Input.get_action_strength("move_forward")
+	else:
+		# タッチデバイス環境：ジョイスティック入力
+		input_dir = mobile_movement
+	
+	# 入力がない場合は前方にダッシュ
+	if input_dir == Vector2.ZERO:
+		input_dir = Vector2(0, -1)  # 前方
+	
+	# ダッシュ方向を設定
+	dash_direction = global_basis * Vector3(input_dir.x, 0, input_dir.y)
+	dash_direction = dash_direction.normalized()
+	
+	# ダッシュ開始
+	is_dashing = true
+	dash_timer = 0.0
+	dash_charge = 0.0  # チャージ消費
+	
+	print("Dash started! Direction: ", dash_direction, " Speed: ", dash_speed)
+
+func stop_dash():
+	is_dashing = false
+	dash_timer = 0.0
+	dash_direction = Vector3.ZERO
+	print("Dash ended")
 
 func shoot():
 	# 死亡中は射撃できない
@@ -452,8 +541,8 @@ func shoot():
 	# 弾数表示を更新
 	update_ammo_display()
 	
-	# 射撃位置と方向を計算
-	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
+	# 射撃位置と方向を計算（銃の先端から）
+	var shoot_position = gun_tip.global_position
 	var shoot_direction = -camera.global_transform.basis.z
 	var shooter_id = name.to_int()
 	
@@ -701,6 +790,12 @@ func update_ammo_display():
 	if game_ui and is_multiplayer_authority():
 		game_ui.update_ammo_display(current_ammo, max_ammo)
 
+func update_dash_display():
+	# GameUIのダッシュチャージ表示を更新
+	var game_ui = get_tree().current_scene.get_node_or_null("GameUI")
+	if game_ui and is_multiplayer_authority() and game_ui.has_method("update_dash_display"):
+		game_ui.update_dash_display()
+
 func get_ammo() -> int:
 	return current_ammo
 
@@ -745,3 +840,13 @@ func check_nearby_pickable_bullets():
 			print("Player detected pickable bullet: ", body.name, " at distance: ", global_position.distance_to(body.global_position))
 			body._handle_collision(self)
 			break  # 一度に1つずつ拾う
+
+# GameUIから呼ばれる関数群
+func get_dash_charge():
+	return dash_charge
+
+func get_dash_charge_time():
+	return dash_charge_time
+
+func is_dash_active():
+	return is_dashing

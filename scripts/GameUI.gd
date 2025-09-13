@@ -6,10 +6,12 @@ extends CanvasLayer
 @onready var health_label = $HealthBar/HealthLabel
 @onready var ammo_bar = $AmmoBar
 @onready var ammo_label = $AmmoBar/AmmoLabel
+@onready var dash_bar = $DashBar
+@onready var dash_label = $DashBar/DashLabel
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.60"
+const VERSION = "v1.7.15"
 
 func _ready():
 	# バージョンを表示
@@ -279,3 +281,61 @@ func update_ammo_display(current_ammo: int, max_ammo: int):
 	ammo_label.modulate = text_color
 	
 	print("Updated ammo display - Ammo: ", current_ammo, "/", max_ammo, " Color: ", bar_color)
+
+# ダッシュ表示を更新する関数
+func update_dash_display():
+	# DashBarとDashLabelが存在するか確認
+	if not dash_bar or not dash_label:
+		print("ERROR: DashBar or DashLabel not found!")
+		return
+	
+	# ローカルプレイヤーを取得
+	var local_player = get_local_player()
+	
+	if local_player and local_player.has_method("get_dash_charge") and local_player.has_method("get_dash_charge_time"):
+		var current_charge = local_player.get_dash_charge()
+		var max_charge = local_player.get_dash_charge_time()
+		var is_dashing = false
+		
+		# ダッシュ中かどうかも取得
+		if local_player.has_method("is_dash_active"):
+			is_dashing = local_player.is_dash_active()
+		
+		# ダッシュバーの値を更新
+		dash_bar.max_value = max_charge
+		dash_bar.value = current_charge
+		
+		# ダッシュバーの色を変更（チャージ量に応じて）
+		var charge_percentage = current_charge / max_charge
+		var bar_color = Color.WHITE
+		var text_color = Color.WHITE
+		var label_text = ""
+		
+		if is_dashing:
+			bar_color = Color.PURPLE
+			text_color = Color.WHITE
+			label_text = "⚡ DASH: Active!"
+		elif charge_percentage >= 1.0:
+			bar_color = Color.CYAN
+			text_color = Color.BLACK
+			label_text = "⚡ DASH: Ready"
+		elif charge_percentage >= 0.5:
+			bar_color = Color.YELLOW
+			text_color = Color.BLACK
+			label_text = "⚡ DASH: " + str(int(charge_percentage * 100)) + "%"
+		else:
+			bar_color = Color.RED
+			text_color = Color.WHITE
+			label_text = "⚡ DASH: " + str(int(charge_percentage * 100)) + "%"
+		
+		# ProgressBarの色を設定
+		dash_bar.modulate = bar_color
+		
+		# テキストの更新と色設定
+		dash_label.text = label_text
+		dash_label.modulate = text_color
+	else:
+		dash_label.text = "⚡ DASH: --"
+		dash_label.modulate = Color.WHITE
+		dash_bar.modulate = Color.WHITE
+		dash_bar.value = 0

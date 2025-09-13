@@ -6,6 +6,7 @@ signal move_input(input: Vector2)
 signal view_input(relative: Vector2)
 signal shoot_pressed
 signal jump_pressed
+signal dash_pressed
 
 # ジョイスティック関連
 @onready var joystick_visual = $JoystickVisual
@@ -15,6 +16,7 @@ signal jump_pressed
 # ボタン関連
 @onready var shoot_button = $ShootButton
 @onready var jump_button = $JumpButton
+@onready var dash_button = $DashButton
 
 # タッチ管理
 var active_touches = {}  # touch_id -> touch_data
@@ -34,6 +36,8 @@ func _ready():
 		shoot_button.pressed.connect(_on_shoot_button_pressed)
 	if jump_button:
 		jump_button.pressed.connect(_on_jump_button_pressed)
+	if dash_button:
+		dash_button.pressed.connect(_on_dash_button_pressed)
 	
 	print("Simple Mobile UI ready!")
 
@@ -207,6 +211,10 @@ func _on_jump_button_pressed():
 	print("JUMP button pressed!")
 	jump_pressed.emit()
 
+func _on_dash_button_pressed():
+	print("DASH button pressed!")
+	dash_pressed.emit()
+
 # **ボタン領域チェック - より堅牢な判定**
 func _is_in_button_area(pos: Vector2) -> bool:
 	if not shoot_button or not jump_button:
@@ -217,17 +225,25 @@ func _is_in_button_area(pos: Vector2) -> bool:
 	var shoot_rect = Rect2(shoot_button.global_position, shoot_button.size)
 	var jump_rect = Rect2(jump_button.global_position, jump_button.size)
 	
+	# ダッシュボタンも追加（存在する場合）
+	var dash_rect = Rect2()
+	if dash_button:
+		dash_rect = Rect2(dash_button.global_position, dash_button.size)
+	
 	# より大きなマージンでボタンを押しやすく（30ピクセル）
 	var margin = 30
 	shoot_rect = shoot_rect.grow(margin)
 	jump_rect = jump_rect.grow(margin)
+	if dash_button:
+		dash_rect = dash_rect.grow(margin)
 	
 	var in_shoot = shoot_rect.has_point(pos)
 	var in_jump = jump_rect.has_point(pos)
-	var in_button_area = in_shoot or in_jump
+	var in_dash = dash_button and dash_rect.has_point(pos)
+	var in_button_area = in_shoot or in_jump or in_dash
 	
 	if in_button_area:
-		print("BUTTON CHECK: Touch in button area - Shoot:", in_shoot, " Jump:", in_jump, " Pos:", pos)
+		print("BUTTON CHECK: Touch in button area - Shoot:", in_shoot, " Jump:", in_jump, " Dash:", in_dash, " Pos:", pos)
 	
 	return in_button_area
 
