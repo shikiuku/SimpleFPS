@@ -29,36 +29,36 @@ color = Color(0.6, 0.6, 0.6, 0.8)
 
 [node name="ShootButton" type="Button" parent="."]
 layout_mode = 0
-anchor_left = 0.8
-anchor_top = 0.7
-anchor_right = 0.95
-anchor_bottom = 0.95
-offset_left = 20.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = -20.0
+anchor_left = 0.87
+anchor_top = 0.82
+anchor_right = 0.98
+anchor_bottom = 0.97
+offset_left = 0.0
+offset_top = 0.0
+offset_right = -10.0
+offset_bottom = -10.0
 text = "SHOOT"
 
 [node name="JumpButton" type="Button" parent="."]
 layout_mode = 0
-anchor_left = 0.65
-anchor_top = 0.75
-anchor_right = 0.78
-anchor_bottom = 0.95
-offset_left = 20.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = -20.0
+anchor_left = 0.87
+anchor_top = 0.5
+anchor_right = 0.98
+anchor_bottom = 0.65
+offset_left = 0.0
+offset_top = 0.0
+offset_right = -10.0
+offset_bottom = -10.0
 text = "JUMP"
 
 [node name="DashButton" type="Button" parent="."]
 layout_mode = 0
-anchor_left = 0.52
-anchor_top = 0.8
-anchor_right = 0.62
-anchor_bottom = 0.95
-offset_left = 20.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = -20.0
+anchor_left = 0.75
+anchor_top = 0.82
+anchor_right = 0.86
+anchor_bottom = 0.97
+offset_left = 0.0
+offset_top = 0.0
+offset_right = -10.0
+offset_bottom = -10.0
 text = "DASH"
