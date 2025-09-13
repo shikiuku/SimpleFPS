@@ -81,26 +81,20 @@ func _physics_process(delta):
 	# 経過時間を更新
 	lifetime_timer += delta
 	
-	# 10秒後から色をフェード
-	if lifetime_timer >= fade_start_time:
-		var fade_progress = (lifetime_timer - fade_start_time) / fade_start_time  # 0.0 から 1.0
-		fade_progress = clamp(fade_progress, 0.0, 1.0)
-		
-		# 色を白にフェード
+	# 10秒経ったら一気に白くして拾えるようにする
+	if lifetime_timer >= fade_start_time and not is_pickable:
+		# 一気に白くする
 		if mesh_instance:
 			var material = mesh_instance.get_surface_override_material(0)
 			if material:
-				var current_color = original_color.lerp(Color.WHITE, fade_progress)
-				material.albedo_color = current_color
-				# エミッションも調整
-				material.emission = current_color * 0.3 * (1.0 - fade_progress)
-				
-				# 完全に白になったら拾えるようにする
-				if fade_progress >= 1.0 and not is_pickable:
-					is_pickable = true
-					# 衝突マスクにプレイヤーレイヤーを追加（拾われる用）
-					collision_layer = collision_layer | 8  # 拾い物レイヤーを追加
-					print("Bullet is now pickable (white)")
+				material.albedo_color = Color.WHITE
+				material.emission = Color.WHITE * 0.1  # 少し光らせる
+		
+		# 拾えるようにする
+		is_pickable = true
+		# 衝突マスクにプレイヤーレイヤーを追加（拾われる用）
+		collision_layer = collision_layer | 8  # 拾い物レイヤーを追加
+		print("Bullet turned white instantly and is now pickable")
 	
 	# レイキャスト衝突検出
 	if not has_hit and not is_pickable:  # 拾える状態になったら攻撃判定を無効化
