@@ -69,8 +69,8 @@ func spawn_player(peer_id: int):
 	var player = player_scene.instantiate()
 	player.name = str(peer_id)
 	
-	# ランダムな位置に配置（サーバーも含めて）
-	var spawn_position = Vector3(randf_range(-5, 5), 2, randf_range(-5, 5))
+	# ランダムな位置に配置（サーバーも含めて）- 少し上空からスポーン
+	var spawn_position = Vector3(randf_range(-5, 5), 10, randf_range(-5, 5))
 	player.position = spawn_position
 	
 	# シーンに追加
