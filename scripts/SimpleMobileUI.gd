@@ -1,6 +1,6 @@
 extends Control
 
-# **シンプルモバイルUI v2.0.0 - 3エリア分割設計**
+# **シンプルモバイルUI v2.1.0 - ボタン優先方式**
 
 signal move_input(input: Vector2)
 signal view_input(relative: Vector2)
@@ -25,10 +25,8 @@ var active_touches = {}  # touch_id -> touch_data
 var button_cooldown = {}
 const BUTTON_COOLDOWN_TIME = 0.05  # 50msクールダウン
 
-# 定数 - 3エリア分割
-const JOYSTICK_AREA_RATIO = 0.4  # 左40%
-const VIEW_AREA_RATIO = 0.2      # 中央20%
-const BUTTON_AREA_RATIO = 0.4    # 右40%
+# 定数
+const JOYSTICK_AREA_RATIO = 0.4  # 左40%はジョイスティック専用
 const JOYSTICK_MAX_DISTANCE = 60.0
 
 func _ready():
@@ -100,17 +98,30 @@ func _is_point_in_button(point: Vector2, button: Button) -> bool:
 	var button_rect = button.get_global_rect()
 	return button_rect.has_point(point)
 
-# **3エリア判定関数**
+# **エリア判定関数 - ボタン優先方式**
 func _get_touch_area(pos: Vector2, screen_size: Vector2) -> String:
-	var joystick_boundary = screen_size.x * JOYSTICK_AREA_RATIO
-	var view_boundary = screen_size.x * (JOYSTICK_AREA_RATIO + VIEW_AREA_RATIO)
+	# まずボタンの領域内かチェック
+	if _is_in_button_area(pos):
+		return "button"
 	
+	# 左側40%はジョイスティック
+	var joystick_boundary = screen_size.x * JOYSTICK_AREA_RATIO
 	if pos.x < joystick_boundary:
 		return "joystick"
-	elif pos.x < view_boundary:
-		return "view"
-	else:
-		return "button"
+	
+	# それ以外はすべて視点操作エリア
+	return "view"
+
+# **ボタンエリア判定**
+func _is_in_button_area(pos: Vector2) -> bool:
+	# 各ボタンの実際の領域をチェック
+	if shoot_button and _is_point_in_button(pos, shoot_button):
+		return true
+	if jump_button and _is_point_in_button(pos, jump_button):
+		return true
+	if dash_button and _is_point_in_button(pos, dash_button):
+		return true
+	return false
 
 func _handle_touch_start(touch_id: int, pos: Vector2, area_type: String):
 	if area_type == "joystick":
