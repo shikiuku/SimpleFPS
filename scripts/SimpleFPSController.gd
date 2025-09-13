@@ -14,6 +14,13 @@ var is_dashing = false               # ダッシュ中かどうか
 var dash_timer = 0.0                 # ダッシュタイマー
 var dash_direction = Vector3.ZERO    # ダッシュ方向
 
+# 三段ジャンプシステム
+@export var max_jump_count = 3        # 最大ジャンプ回数（三段ジャンプ）
+@export var second_jump_velocity = 7.0  # 2回目ジャンプの力
+@export var third_jump_velocity = 6.0   # 3回目ジャンプの力
+var current_jump_count = 0           # 現在のジャンプ回数
+var was_on_floor_last_frame = false  # 前フレームで地面にいたか
+
 # 同期用プロパティ（RPC同期で使用）
 @export var sync_position := Vector3.ZERO
 @export var sync_rotation_y := 0.0
@@ -87,6 +94,10 @@ func _ready():
 	
 	# ダッシュシステムの初期化
 	dash_charge = dash_charge_time  # フル充電状態でスタート
+	
+	# 三段ジャンプシステムの初期化
+	current_jump_count = 0
+	was_on_floor_last_frame = is_on_floor()
 	
 	# プレイヤー上部のHP表示を初期化
 	call_deferred("update_overhead_health_display")
@@ -398,21 +409,47 @@ func _physics_process(delta):
 			print("受信中 - Player: ", name, " 受信Pos: ", sync_position, " 現在Pos: ", global_position)
 
 func handle_movement(delta):
+	# 三段ジャンプの地面判定処理
+	var is_currently_on_floor = is_on_floor()
+	
+	# 地面に着地した瞬間にジャンプカウントをリセット
+	if is_currently_on_floor and not was_on_floor_last_frame:
+		current_jump_count = 0
+		print("Landed on ground! Jump count reset to: ", current_jump_count)
+	
+	was_on_floor_last_frame = is_currently_on_floor
+	
 	# 重力を適用
-	if not is_on_floor():
+	if not is_currently_on_floor:
 		velocity.y += get_gravity().y * delta
 	
-	# ジャンプ処理（PC: スペース / タッチデバイス: ボタン）
+	# 三段ジャンプ処理（PC: スペース / タッチデバイス: ボタン）
 	var should_jump = false
 	if not _is_touch_device():
-		# PC環境：スペースキー
-		should_jump = Input.is_action_pressed("jump") and is_on_floor()
+		# PC環境：スペースキーが押された瞬間をチェック
+		should_jump = Input.is_action_just_pressed("jump")
 	else:
-		# タッチデバイス環境：ボタン
-		should_jump = mobile_jump_requested and is_on_floor()
+		# タッチデバイス環境：ボタンが押された瞬間
+		should_jump = mobile_jump_requested
 		
-	if should_jump:
-		velocity.y = jump_velocity
+	if should_jump and current_jump_count < max_jump_count:
+		# ジャンプ回数に応じて威力を調整
+		var jump_power = jump_velocity
+		if current_jump_count == 1:
+			jump_power = second_jump_velocity
+		elif current_jump_count == 2:
+			jump_power = third_jump_velocity
+		
+		velocity.y = jump_power
+		current_jump_count += 1
+		mobile_jump_requested = false  # モバイル用リセット
+		
+		print("Jump executed! Count: ", current_jump_count, "/", max_jump_count, " Power: ", jump_power)
+		
+		# ジャンプ回数UIを更新
+		update_jump_display()
+	elif should_jump:
+		print("Cannot jump - already used all ", max_jump_count, " jumps")
 		mobile_jump_requested = false  # モバイル用リセット
 
 	# 移動入力を取得
@@ -850,3 +887,16 @@ func get_dash_charge_time():
 
 func is_dash_active():
 	return is_dashing
+
+# ジャンプ関連のアクセサ関数群
+func get_jump_count():
+	return current_jump_count
+
+func get_max_jump_count():
+	return max_jump_count
+
+func update_jump_display():
+	# GameUIのジャンプ表示を更新
+	var game_ui = get_tree().current_scene.get_node_or_null("GameUI")
+	if game_ui and is_multiplayer_authority() and game_ui.has_method("update_jump_display"):
+		game_ui.update_jump_display()

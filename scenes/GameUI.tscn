@@ -95,6 +95,19 @@ label_settings = SubResource("LabelSettings_Health")
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="JumpLabel" type="Label" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 670.0
+offset_top = -50.0
+offset_right = 850.0
+offset_bottom = -20.0
+text = "🦘 JUMP: Ready (3)"
+label_settings = SubResource("LabelSettings_Health")
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="KillNotificationLabel" type="Label" parent="."]
 visible = false
 anchors_preset = 8

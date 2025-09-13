@@ -8,10 +8,11 @@ extends CanvasLayer
 @onready var ammo_label = $AmmoBar/AmmoLabel
 @onready var dash_bar = $DashBar
 @onready var dash_label = $DashBar/DashLabel
+@onready var jump_label = $JumpLabel
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.15"
+const VERSION = "v1.7.16"
 
 func _ready():
 	# バージョンを表示
@@ -38,6 +39,7 @@ func _ready():
 func _on_update_timer():
 	update_player_count()
 	update_health_display()
+	update_jump_display()
 
 func update_player_count():
 	var peer_count = 0
@@ -339,3 +341,45 @@ func update_dash_display():
 		dash_label.modulate = Color.WHITE
 		dash_bar.modulate = Color.WHITE
 		dash_bar.value = 0
+
+# ジャンプ表示を更新する関数
+func update_jump_display():
+	# JumpLabelが存在するか確認
+	if not jump_label:
+		print("ERROR: JumpLabel not found!")
+		return
+	
+	# ローカルプレイヤーを取得
+	var local_player = get_local_player()
+	
+	if local_player and local_player.has_method("get_jump_count") and local_player.has_method("get_max_jump_count"):
+		var current_count = local_player.get_jump_count()
+		var max_count = local_player.get_max_jump_count()
+		var is_on_floor = false
+		
+		# 地面にいるかどうかも取得
+		if local_player.has_method("is_on_floor"):
+			is_on_floor = local_player.is_on_floor()
+		
+		# ジャンプ回数に応じて表示と色を変更
+		var text_color = Color.WHITE
+		var label_text = ""
+		
+		if is_on_floor:
+			text_color = Color.GREEN
+			label_text = "🦘 JUMP: Ready (3)"
+		else:
+			var remaining = max_count - current_count
+			if remaining > 0:
+				text_color = Color.YELLOW
+				label_text = "🦘 JUMP: " + str(remaining) + " left"
+			else:
+				text_color = Color.RED
+				label_text = "🦘 JUMP: None"
+		
+		# テキストの更新と色設定
+		jump_label.text = label_text
+		jump_label.modulate = text_color
+	else:
+		jump_label.text = "🦘 JUMP: --"
+		jump_label.modulate = Color.WHITE
