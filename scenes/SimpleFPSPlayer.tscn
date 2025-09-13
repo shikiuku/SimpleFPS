@@ -20,7 +20,6 @@ size = Vector3(0.1, 0.1, 1.5)
 albedo_color = Color(1, 1, 0, 0.8)
 
 [node name="FPSPlayer" type="CharacterBody3D"]
-collision_layer = 1
 collision_mask = 3
 script = ExtResource("1_abc123")
 

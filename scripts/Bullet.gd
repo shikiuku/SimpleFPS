@@ -24,12 +24,27 @@ func _ready():
 	collision_layer = 4  # layer 3 (Projectiles)
 	collision_mask = 3   # layer 1 (Player = bit 0) + layer 2 (Environment = bit 1)
 	
-	# RigidBody3Dの設定
+	# RigidBody3Dの設定（.tscnファイルが設定を失うため強制的に設定）
 	gravity_scale = 1.0
 	continuous_cd = true  # 連続衝突検出を有効化
+	contact_monitor = true  # 接触監視を有効化
+	max_contacts_reported = 10  # 最大接触報告数
+	
+	# フレーム遅延後に再度確実に設定（Godotの初期化順序問題を回避）
+	call_deferred("_ensure_physics_settings")
 	
 	print("Bullet initialized - collision_layer: ", collision_layer, " collision_mask: ", collision_mask)
 	print("Binary representation - layer: ", String.num(collision_layer, 2), " mask: ", String.num(collision_mask, 2))
+
+func _ensure_physics_settings():
+	# 物理設定を確実に適用
+	collision_layer = 4
+	collision_mask = 3
+	gravity_scale = 1.0
+	continuous_cd = true
+	contact_monitor = true
+	max_contacts_reported = 10
+	print("Physics settings ensured - gravity_scale: ", gravity_scale, " contact_monitor: ", contact_monitor)
 
 # レイキャストを使った追加の衝突検出
 var last_position = Vector3.ZERO
@@ -135,10 +150,11 @@ func _handle_collision(body):
 		
 		# 弾丸を削除
 		call_deferred("queue_free")
-	# 地面や壁に当たった場合
+	# 地面や壁に当たった場合（削除しない）
 	elif not body.name.begins_with("Bullet"):
-		print("Bullet hit environment object: ", body.name, " - destroying bullet")
-		call_deferred("queue_free")
+		print("Bullet hit environment object: ", body.name, " - bullet continues flying")
+		# 壁に当たっても弾丸は削除しない（プレイヤーに当たった時のみ削除）
+		has_hit = false  # 継続して他の物体との衝突も検出可能にする
 	else:
 		print("Bullet hit another bullet - ignoring")
 		has_hit = false  # 弾同士の衝突の場合はフラグをリセット

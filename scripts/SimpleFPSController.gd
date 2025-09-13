@@ -40,6 +40,11 @@ func _ready():
 	var peer_id = name.to_int()
 	set_multiplayer_authority(peer_id)
 	
+	# プレイヤーの衝突設定を強制的に設定（.tscnファイルが設定を失うため）
+	collision_layer = 1  # Player layer
+	collision_mask = 3   # Player (1) + Environment (2)
+	print("Player collision settings - layer: ", collision_layer, " mask: ", collision_mask)
+	
 	# 初期位置を設定（重要！）
 	sync_position = global_position
 	sync_rotation_y = rotation.y
