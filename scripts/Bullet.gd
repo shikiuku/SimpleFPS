@@ -166,6 +166,11 @@ func _handle_collision(body):
 			if body.has_method("add_ammo"):
 				body.add_ammo(1)  # 1発補充
 				print("Player ", body.name, " picked up 1 ammo")
+			
+			# 弾回収通知を表示（ローカルプレイヤーの場合のみ）
+			if body.is_multiplayer_authority():
+				show_ammo_pickup_notification()
+			
 			# 弾を削除
 			call_deferred("queue_free")
 			return
@@ -250,6 +255,23 @@ func show_damage_notification(attacker_id: int, victim_id: int, damage_amount: i
 	
 	# GameUIのダメージ通知機能を呼び出し
 	game_ui.show_damage_notification(attacker_color, victim_color, damage_amount, remaining_hp)
+
+# 弾回収通知を表示する関数
+func show_ammo_pickup_notification():
+	print("=== AMMO PICKUP NOTIFICATION ===")
+	
+	# GameUIを取得
+	var current_scene = get_tree().current_scene
+	var game_ui = current_scene.get_node_or_null("GameUI")
+	
+	if not game_ui:
+		print("ERROR: GameUI not found - cannot show ammo pickup notification")
+		return
+	
+	print("Ammo pickup notification: bullet collected")
+	
+	# GameUIの弾回収通知機能を呼び出し
+	game_ui.show_ammo_pickup_notification()
 
 # プレイヤーIDから色名を取得する関数
 func get_player_color_name(player_id: int) -> String:

@@ -9,7 +9,7 @@ extends CanvasLayer
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.54"
+const VERSION = "v1.7.55"
 
 func _ready():
 	# バージョンを表示
@@ -217,6 +217,30 @@ func get_color_from_name(color_name: String) -> Color:
 			return Color.PURPLE
 		_:
 			return Color.WHITE
+
+# 弾回収通知を表示する関数
+func show_ammo_pickup_notification():
+	if not kill_notification_label:
+		print("ERROR: KillNotificationLabel not found!")
+		return
+	
+	# 弾回収通知メッセージを作成
+	var message = "弾を回収しました"
+	kill_notification_label.text = message
+	kill_notification_label.visible = true
+	
+	# 色を設定（緑色で表示）
+	kill_notification_label.modulate = Color.GREEN
+	
+	print("Ammo pickup notification displayed: ", message)
+	
+	# 2秒後に非表示にする
+	var timer = Timer.new()
+	timer.wait_time = 2.0
+	timer.one_shot = true
+	timer.timeout.connect(_hide_kill_notification)
+	add_child(timer)
+	timer.start()
 
 # 弾数表示を更新する関数
 func update_ammo_display(current_ammo: int, max_ammo: int):
