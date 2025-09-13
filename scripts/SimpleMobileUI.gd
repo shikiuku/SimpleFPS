@@ -49,7 +49,7 @@ func _ready():
 	print("Simple Mobile UI ready!")
 
 # **マルチタッチ対応タッチ処理 - ボタンとジョイスティックの並行操作を許可**
-func _unhandled_input(event):
+func _input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
 	
@@ -60,27 +60,28 @@ func _unhandled_input(event):
 	# **ボタン領域チェック - ボタン領域内のタッチはボタンに優先権を与える**
 	if _is_in_button_area(touch_pos):
 		print("BUTTON AREA: Touch ", touch_id, " is in button area - letting UI handle")
-		# ボタン領域のタッチはUIに任せるが、イベントは消費しない
+		# ボタン領域のタッチはUIに任せる（イベント消費せず、早期リターン）
 		return  
 	
 	# **シンプルな画面分割: 左50% = ジョイスティック、右50% = 視点**
 	var is_left_side = touch_pos.x < screen_size.x * 0.5
 	
-	print("NON-BUTTON TOUCH: ID=", touch_id, " Pos=", touch_pos, " Side=", "LEFT" if is_left_side else "RIGHT")
-	
 	# タッチ開始
 	if event is InputEventScreenTouch and event.pressed:
+		print("TOUCH START: ID=", touch_id, " Pos=", touch_pos, " Side=", "LEFT" if is_left_side else "RIGHT")
 		_handle_touch_start(touch_id, touch_pos, is_left_side)
-		# ジョイスティック/視点操作のイベントのみ消費
+		# ボタン領域外のタッチのみイベント消費
 		get_viewport().set_input_as_handled()
 	
 	# タッチ終了
 	elif event is InputEventScreenTouch and not event.pressed:
+		print("TOUCH END: ID=", touch_id)
 		_handle_touch_end(touch_id)
 		get_viewport().set_input_as_handled()
 	
 	# ドラッグ
 	elif event is InputEventScreenDrag:
+		print("TOUCH DRAG: ID=", touch_id, " Pos=", touch_pos)
 		_handle_touch_drag(touch_id, touch_pos, event.relative)
 		get_viewport().set_input_as_handled()
 
