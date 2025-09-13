@@ -41,6 +41,13 @@ var current_x_rotation = 0.0  # 垂直回転
 # 弾丸のプリロード
 var bullet_scene = preload("res://scenes/Bullet.tscn")
 
+# 銃の反動アニメーション関連
+var gun_original_position: Vector3
+var gun_recoil_tween: Tween
+const RECOIL_DISTANCE = -0.1  # 反動で後退する距離
+const RECOIL_DURATION = 0.08  # 反動の持続時間（秒）
+const RECOIL_RETURN_DURATION = 0.12  # 元の位置に戻る時間（秒）
+
 # HPシステム
 @export var max_health = 100
 var current_health = 100
@@ -98,6 +105,12 @@ func _ready():
 	# 三段ジャンプシステムの初期化
 	current_jump_count = 0
 	was_on_floor_last_frame = is_on_floor()
+	
+	# 銃の反動アニメーション初期化
+	if gun_model:
+		gun_original_position = gun_model.position
+		gun_recoil_tween = create_tween()
+		print("Gun recoil system initialized - Original position: ", gun_original_position)
 	
 	# プレイヤー上部のHP表示を初期化
 	call_deferred("update_overhead_health_display")
@@ -561,6 +574,31 @@ func stop_dash():
 	dash_direction = Vector3.ZERO
 	print("Dash ended")
 
+# 銃の反動アニメーション関数
+func play_gun_recoil():
+	if not gun_model:
+		return
+	
+	print("Playing gun recoil animation")
+	
+	# 既存のアニメーションを停止
+	if gun_recoil_tween:
+		gun_recoil_tween.kill()
+	
+	# 新しいTweenを作成
+	gun_recoil_tween = create_tween()
+	gun_recoil_tween.set_parallel(true)  # パラレルモードを有効
+	
+	# 反動アニメーション：銃を後方に移動
+	var recoil_position = gun_original_position + Vector3(0, 0, RECOIL_DISTANCE)
+	gun_recoil_tween.tween_property(gun_model, "position", recoil_position, RECOIL_DURATION)
+	gun_recoil_tween.tween_property(gun_model, "position", gun_original_position, RECOIL_DURATION + RECOIL_RETURN_DURATION)
+	
+	# 少し上向きの反動も追加（リアルな感じ）
+	var recoil_rotation = gun_model.rotation + Vector3(-0.05, 0, 0)  # 5度上向き
+	gun_recoil_tween.tween_property(gun_model, "rotation", recoil_rotation, RECOIL_DURATION * 0.5)
+	gun_recoil_tween.tween_property(gun_model, "rotation", Vector3.ZERO, RECOIL_DURATION * 0.5 + RECOIL_RETURN_DURATION * 1.5)
+
 func shoot():
 	# 死亡中は射撃できない
 	if is_dead:
@@ -574,6 +612,9 @@ func shoot():
 	# 弾数を減らす
 	current_ammo -= 1
 	print("Shot fired! Ammo remaining: ", current_ammo, "/", max_ammo)
+	
+	# 銃の反動アニメーションを再生
+	play_gun_recoil()
 	
 	# 弾数表示を更新
 	update_ammo_display()
