@@ -147,7 +147,16 @@ func setup_multiplayer():
 			$HealthBarUI.visible = false
 			print("Overhead health display hidden for local player")
 		
-		print("Local player initialized: ", name, " (BLUE - INVISIBLE TO SELF)")
+		# 自分の銃の色をプレイヤーIDに基づく色に設定
+		if gun_model:
+			var my_player_id = name.to_int()
+			var my_color = get_player_color(my_player_id)
+			var gun_material = StandardMaterial3D.new()
+			gun_material.albedo_color = my_color
+			gun_model.set_surface_override_material(0, gun_material)
+			print("Local player gun color set to: ", get_color_name(my_color), " (Player ID: ", my_player_id, ")")
+		
+		print("Local player initialized: ", name, " (", get_color_name(get_player_color(name.to_int())), " - INVISIBLE TO SELF)")
 	else:
 		# 他のプレイヤー（リモート）
 		camera.current = false
@@ -175,6 +184,12 @@ func setup_multiplayer():
 		var new_material = StandardMaterial3D.new()
 		new_material.albedo_color = player_color
 		mesh_instance.set_surface_override_material(0, new_material)
+		
+		# 銃の色もプレイヤーの色に設定
+		if gun_model:
+			var gun_material = StandardMaterial3D.new()
+			gun_material.albedo_color = player_color
+			gun_model.set_surface_override_material(0, gun_material)
 		
 		
 		print("Remote player initialized: ", name, " (", get_color_name(player_color), " - VISIBLE)")
@@ -597,11 +612,12 @@ func play_gun_recoil():
 	# 新しいTweenを作成（シーケンシャル）
 	gun_recoil_tween = create_tween()
 	
-	# 反動アニメーション：銃のローカル座標で後ろ向きに移動
-	# カメラの回転に関係なく、常にZ軸正方向（後ろ向き）に反動
-	var recoil_direction = Vector3(0, 0, -RECOIL_DISTANCE)  # ローカル座標でZ軸後ろ向き
+	# 反動アニメーション：銃の現在の向きでの後ろ向きに移動
+	# 銃の現在のtransformを使って後ろ向きベクトルを計算
+	var gun_backward = gun_model.transform.basis.z  # 銃の後ろ向き（Z軸正方向）
+	var recoil_direction = gun_backward * (-RECOIL_DISTANCE)  # 銃の向きの後ろ向きに反動
 	var recoil_position = gun_original_position + recoil_direction
-	print("Recoil animation - Local recoil direction: ", recoil_direction, " Moving to: ", recoil_position)
+	print("Recoil animation - Gun backward: ", gun_backward, " Recoil direction: ", recoil_direction, " Moving to: ", recoil_position)
 	
 	# 現在のカメラ回転を基準に反動回転を計算（カメラの向きに合わせる）
 	var current_gun_rotation = gun_model.rotation
@@ -652,6 +668,9 @@ func shoot():
 	
 	# 弾数表示を更新
 	update_ammo_display()
+	
+	# 弾数に応じて銃の色を更新
+	update_gun_color_based_on_ammo()
 	
 	# 射撃位置と方向を計算（銃の先端から）
 	var shoot_position = gun_tip.global_position
@@ -802,6 +821,9 @@ func respawn():
 	# 弾数表示を更新
 	update_ammo_display()
 	
+	# 弾数に応じて銃の色を更新
+	update_gun_color_based_on_ammo()
+	
 	# タイマーを削除
 	if respawn_timer:
 		respawn_timer.queue_free()
@@ -839,6 +861,9 @@ func handle_respawn_return():
 	
 	# 弾数表示を更新
 	update_ammo_display()
+	
+	# 弾数に応じて銃の色を更新
+	update_gun_color_based_on_ammo()
 	
 	# リスポーンフラグをクリア
 	RespawnManager.clear_respawn_flag()
@@ -895,6 +920,9 @@ func _on_reload_timer_timeout():
 	
 	# GameUIがある場合は弾数表示を更新
 	update_ammo_display()
+	
+	# 弾数に応じて銃の色を更新
+	update_gun_color_based_on_ammo()
 
 func update_ammo_display():
 	# GameUIの弾数表示を更新
@@ -919,6 +947,9 @@ func add_ammo(amount: int):
 	current_ammo = min(current_ammo + amount, max_ammo)
 	print("Added ", amount, " ammo. Current ammo: ", current_ammo, "/", max_ammo)
 	update_ammo_display()
+	
+	# 弾数に応じて銃の色を更新
+	update_gun_color_based_on_ammo()
 
 # 近くの拾える弾をチェックする関数（プレイヤーの当たり判定を拡大）
 func check_nearby_pickable_bullets():
@@ -975,3 +1006,63 @@ func update_jump_display():
 	var game_ui = get_tree().current_scene.get_node_or_null("GameUI")
 	if game_ui and is_multiplayer_authority() and game_ui.has_method("update_jump_display"):
 		game_ui.update_jump_display()
+
+# 銃の色を弾数に基づいて更新する関数
+func update_gun_color_based_on_ammo():
+	print("=== update_gun_color_based_on_ammo() called ===")
+	
+	if not gun_model:
+		print("ERROR: gun_model not found!")
+		return
+	
+	print("gun_model found: ", gun_model.name)
+	
+	# 基本のプレイヤー色を取得
+	var player_id = name.to_int()
+	var base_color = get_player_color(player_id)
+	
+	# 弾数の割合を計算（0.0 から 1.0）
+	var ammo_percentage = float(current_ammo) / float(max_ammo)
+	
+	# 弾数に応じた色と透明度の変化
+	var adjusted_color: Color
+	
+	if ammo_percentage > 0.8:
+		# 弾数80%以上：元の色（完全不透明）
+		adjusted_color = base_color
+	elif ammo_percentage > 0.6:
+		# 弾数60-80%：少し薄く
+		adjusted_color = Color(base_color.r * 0.9, base_color.g * 0.9, base_color.b * 0.9, 0.9)
+	elif ammo_percentage > 0.4:
+		# 弾数40-60%：もう少し薄く
+		adjusted_color = Color(base_color.r * 0.8, base_color.g * 0.8, base_color.b * 0.8, 0.8)
+	elif ammo_percentage > 0.2:
+		# 弾数20-40%：かなり薄く
+		adjusted_color = Color(base_color.r * 0.6, base_color.g * 0.6, base_color.b * 0.6, 0.6)
+	else:
+		# 弾数20%以下：赤色で半透明
+		adjusted_color = Color(1.0, 0.2, 0.2, 0.4)
+	
+	
+	# 銃のマテリアルを更新
+	var gun_material = StandardMaterial3D.new()
+	gun_material.albedo_color = adjusted_color
+	
+	# 透明度が1.0未満の場合、透明設定を有効にする
+	if adjusted_color.a < 1.0:
+		gun_material.flags_transparent = true
+		gun_material.flags_unshaded = false
+		gun_material.no_depth_test = false
+	
+	gun_model.set_surface_override_material(0, gun_material)
+	
+	# 現在のマテリアルも確認
+	var current_material = gun_model.get_surface_override_material(0)
+	if current_material:
+		print("Material applied successfully. Current material color: ", current_material.albedo_color)
+	else:
+		print("ERROR: Failed to apply material!")
+	
+	print("Gun color updated - Ammo: ", current_ammo, "/", max_ammo, " (", int(ammo_percentage * 100), "%)")
+	print("Base color: ", base_color, " -> Adjusted color: ", adjusted_color)
+	print("=== End update_gun_color_based_on_ammo() ===")
