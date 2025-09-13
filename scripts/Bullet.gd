@@ -81,6 +81,16 @@ func _physics_process(delta):
 	# 経過時間を更新
 	lifetime_timer += delta
 	
+	# 消滅前3秒間（27秒経過後）から点滅を開始
+	if lifetime_timer >= (lifetime - 3.0):
+		if mesh_instance:
+			# 点滅効果（0.2秒間隔で点滅）
+			var blink_time = fmod(lifetime_timer, 0.4)  # 0.4秒で1回の点滅サイクル
+			if blink_time < 0.2:
+				mesh_instance.visible = true
+			else:
+				mesh_instance.visible = false
+	
 	# 4秒経ったら一気に白くして拾えるようにする
 	if lifetime_timer >= fade_start_time and not is_pickable:
 		# 一気に白くする
@@ -168,8 +178,8 @@ func _handle_collision(body):
 			print("=== PICKING UP WHITE BULLET ===")
 			# プレイヤーに弾を補充
 			if body.has_method("add_ammo"):
-				body.add_ammo(1)  # 1発補充
-				print("Player ", body.name, " picked up 1 ammo")
+				body.add_ammo(3)  # 3発補充
+				print("Player ", body.name, " picked up 3 ammo")
 			
 			# 弾回収通知を表示（ローカルプレイヤーの場合のみ）
 			if body.is_multiplayer_authority():
