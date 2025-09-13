@@ -23,7 +23,7 @@ var active_touches = {}  # touch_id -> touch_data
 
 # ボタンクールダウン管理（重複防止）
 var button_cooldown = {}
-const BUTTON_COOLDOWN_TIME = 0.1  # 100msクールダウン
+const BUTTON_COOLDOWN_TIME = 0.05  # 50msクールダウン（より短時間で連続操作可能）
 
 # 定数
 const JOYSTICK_MAX_DISTANCE = 60.0
@@ -48,8 +48,8 @@ func _ready():
 	
 	print("Simple Mobile UI ready!")
 
-# **シンプルなタッチ処理**
-func _input(event):
+# **マルチタッチ対応タッチ処理 - ボタンとジョイスティックの並行操作を許可**
+func _unhandled_input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
 	
@@ -57,22 +57,32 @@ func _input(event):
 	var touch_pos = event.position
 	var touch_id = event.index
 	
+	# **ボタン領域チェック - ボタン領域内のタッチはボタンに優先権を与える**
+	if _is_in_button_area(touch_pos):
+		print("BUTTON AREA: Touch ", touch_id, " is in button area - letting UI handle")
+		# ボタン領域のタッチはUIに任せるが、イベントは消費しない
+		return  
+	
 	# **シンプルな画面分割: 左50% = ジョイスティック、右50% = 視点**
 	var is_left_side = touch_pos.x < screen_size.x * 0.5
 	
-	print("TOUCH: ID=", touch_id, " Pos=", touch_pos, " Side=", "LEFT" if is_left_side else "RIGHT")
+	print("NON-BUTTON TOUCH: ID=", touch_id, " Pos=", touch_pos, " Side=", "LEFT" if is_left_side else "RIGHT")
 	
 	# タッチ開始
 	if event is InputEventScreenTouch and event.pressed:
 		_handle_touch_start(touch_id, touch_pos, is_left_side)
+		# ジョイスティック/視点操作のイベントのみ消費
+		get_viewport().set_input_as_handled()
 	
 	# タッチ終了
 	elif event is InputEventScreenTouch and not event.pressed:
 		_handle_touch_end(touch_id)
+		get_viewport().set_input_as_handled()
 	
 	# ドラッグ
 	elif event is InputEventScreenDrag:
 		_handle_touch_drag(touch_id, touch_pos, event.relative)
+		get_viewport().set_input_as_handled()
 
 func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 	if is_left_side:
@@ -86,14 +96,11 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 			"center": pos
 		}
 		_show_joystick_at(pos)
-		print("JOYSTICK START: ID=", touch_id)
+		print("JOYSTICK START: ID=", touch_id, " - Buttons should still work!")
 		
 	else:
-		# **右側 = 視点操作とボタン操作を区別**
-		# ボタン領域内では視点操作を開始しない（ボタンのタッチイベントは通す）
-		if _is_in_button_area(pos):
-			print("BUTTON AREA: View touch blocked, but UI buttons still work")
-			return
+		# **右側 = 視点操作 - ボタン領域は既に除外済み**
+		# ボタン領域内のタッチは_unhandled_inputでフィルタ済みなのでここには来ない
 		
 		# **視点（1本のみ） - 既存タッチがある場合は無視**
 		if _has_view_touch():
@@ -104,7 +111,7 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 			"type": "view",
 			"last_pos": pos
 		}
-		print("VIEW START: ID=", touch_id)
+		print("VIEW START: ID=", touch_id, " - Buttons should still work!")
 
 func _handle_touch_end(touch_id: int):
 	if touch_id not in active_touches:
