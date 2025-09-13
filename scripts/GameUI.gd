@@ -12,7 +12,7 @@ extends CanvasLayer
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.29"
+const VERSION = "v1.7.30"
 
 func _ready():
 	# バージョンを表示
