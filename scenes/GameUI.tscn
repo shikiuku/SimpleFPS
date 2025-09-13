@@ -55,6 +55,26 @@ label_settings = SubResource("LabelSettings_Health")
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="AmmoBar" type="ProgressBar" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 270.0
+offset_top = -50.0
+offset_right = 450.0
+offset_bottom = -20.0
+value = 50.0
+show_percentage = false
+
+[node name="AmmoLabel" type="Label" parent="AmmoBar"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "🔫 Ammo: 50/50"
+label_settings = SubResource("LabelSettings_Health")
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="KillNotificationLabel" type="Label" parent="."]
 visible = false
 anchors_preset = 8

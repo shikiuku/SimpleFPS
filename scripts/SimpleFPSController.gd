@@ -30,6 +30,11 @@ var current_health = 100
 var is_dead = false
 var respawn_timer: Timer = null
 
+# 弾数システム
+@export var max_ammo = 50
+var current_ammo = 50
+var reload_timer: Timer = null
+
 # モバイル入力関連
 var mobile_movement = Vector2.ZERO
 var mobile_ui: Control = null
@@ -64,6 +69,10 @@ func _ready():
 	# HPシステムの初期化
 	current_health = max_health
 	is_dead = false
+	
+	# 弾数システムの初期化
+	current_ammo = max_ammo
+	setup_reload_timer()
 	
 	# プレイヤー上部のHP表示を初期化
 	call_deferred("update_overhead_health_display")
@@ -427,7 +436,19 @@ func shoot():
 	# 死亡中は射撃できない
 	if is_dead:
 		return
+	
+	# 弾がない場合は射撃できない
+	if current_ammo <= 0:
+		print("No ammo! Cannot shoot. Current ammo: ", current_ammo)
+		return
 		
+	# 弾数を減らす
+	current_ammo -= 1
+	print("Shot fired! Ammo remaining: ", current_ammo, "/", max_ammo)
+	
+	# 弾数表示を更新
+	update_ammo_display()
+	
 	# 射撃位置と方向を計算
 	var shoot_position = camera.global_position + camera.global_transform.basis.z * -0.5
 	var shoot_direction = -camera.global_transform.basis.z
@@ -560,6 +581,9 @@ func respawn():
 	current_health = max_health
 	is_dead = false
 	
+	# 弾数を回復
+	current_ammo = max_ammo
+	
 	# プレイヤーを再有効化
 	set_physics_process(true)
 	visible = true
@@ -571,12 +595,15 @@ func respawn():
 	# プレイヤー上部のHP表示を更新
 	update_overhead_health_display()
 	
+	# 弾数表示を更新
+	update_ammo_display()
+	
 	# タイマーを削除
 	if respawn_timer:
 		respawn_timer.queue_free()
 		respawn_timer = null
 	
-	print("Player ", name, " respawned with full health")
+	print("Player ", name, " respawned with full health and ammo")
 
 func get_health() -> int:
 	return current_health
@@ -592,6 +619,9 @@ func handle_respawn_return():
 	current_health = max_health
 	is_dead = false
 	
+	# 弾数を完全回復
+	current_ammo = max_ammo
+	
 	# スポーン位置にリセット
 	global_position = RespawnManager.get_respawn_position()
 	velocity = Vector3.ZERO
@@ -602,6 +632,9 @@ func handle_respawn_return():
 	
 	# プレイヤー上部のHP表示を更新
 	update_overhead_health_display()
+	
+	# 弾数表示を更新
+	update_ammo_display()
 	
 	# リスポーンフラグをクリア
 	RespawnManager.clear_respawn_flag()
@@ -638,3 +671,35 @@ func update_overhead_health_display():
 	health_bar_ui.modulate = bar_color
 	
 	print("Updated overhead health display for ", name, " - HP: ", current_health, "/", max_health, " Color: ", bar_color)
+
+# 弾数システム関数群
+func setup_reload_timer():
+	# リロードタイマーを作成
+	reload_timer = Timer.new()
+	reload_timer.wait_time = 1.0  # 1秒間隔
+	reload_timer.one_shot = false  # 繰り返し実行
+	reload_timer.timeout.connect(_on_reload_timer_timeout)
+	add_child(reload_timer)
+	reload_timer.start()
+	print("Reload timer started - refill 1 ammo every 1 second")
+
+func _on_reload_timer_timeout():
+	# 弾数が最大でない場合のみリロード
+	if current_ammo < max_ammo:
+		current_ammo += 1
+		print("Ammo reloaded: ", current_ammo, "/", max_ammo)
+	
+	# GameUIがある場合は弾数表示を更新
+	update_ammo_display()
+
+func update_ammo_display():
+	# GameUIの弾数表示を更新
+	var game_ui = get_tree().current_scene.get_node_or_null("GameUI")
+	if game_ui and is_multiplayer_authority():
+		game_ui.update_ammo_display(current_ammo, max_ammo)
+
+func get_ammo() -> int:
+	return current_ammo
+
+func get_max_ammo() -> int:
+	return max_ammo

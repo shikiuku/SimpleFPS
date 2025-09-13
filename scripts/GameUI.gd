@@ -4,10 +4,12 @@ extends CanvasLayer
 @onready var player_count_label = $PlayerCountLabel
 @onready var health_bar = $HealthBar
 @onready var health_label = $HealthBar/HealthLabel
+@onready var ammo_bar = $AmmoBar
+@onready var ammo_label = $AmmoBar/AmmoLabel
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.50"
+const VERSION = "v1.7.51"
 
 func _ready():
 	# バージョンを表示
@@ -18,6 +20,9 @@ func _ready():
 	
 	# HP表示の初期設定
 	update_health_display()
+	
+	# 弾数表示の初期設定
+	update_ammo_display(50, 50)
 	
 	# プレイヤー数とHPを定期的に更新
 	var timer = Timer.new()
@@ -212,3 +217,41 @@ func get_color_from_name(color_name: String) -> Color:
 			return Color.PURPLE
 		_:
 			return Color.WHITE
+
+# 弾数表示を更新する関数
+func update_ammo_display(current_ammo: int, max_ammo: int):
+	# AmmoBarとAmmoLabelが存在するか確認
+	if not ammo_bar or not ammo_label:
+		print("ERROR: AmmoBar or AmmoLabel not found!")
+		return
+	
+	# 弾数バーの値を更新
+	ammo_bar.max_value = max_ammo
+	ammo_bar.value = current_ammo
+	
+	# 弾数バーの色を変更（少ないほど赤く）
+	var ammo_percentage = float(current_ammo) / float(max_ammo)
+	var bar_color = Color.WHITE
+	var text_color = Color.WHITE
+	
+	if ammo_percentage <= 0.2:
+		bar_color = Color.RED
+		text_color = Color.WHITE
+	elif ammo_percentage <= 0.4:
+		bar_color = Color.ORANGE
+		text_color = Color.WHITE
+	elif ammo_percentage <= 0.6:
+		bar_color = Color.YELLOW
+		text_color = Color.BLACK
+	else:
+		bar_color = Color.BLUE
+		text_color = Color.WHITE
+	
+	# ProgressBarの色を設定
+	ammo_bar.modulate = bar_color
+	
+	# テキストの更新と色設定
+	ammo_label.text = "🔫 Ammo: " + str(current_ammo) + "/" + str(max_ammo)
+	ammo_label.modulate = text_color
+	
+	print("Updated ammo display - Ammo: ", current_ammo, "/", max_ammo, " Color: ", bar_color)
