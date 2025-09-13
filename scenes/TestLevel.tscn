@@ -163,7 +163,7 @@ transform = Transform3D(36.2923, 0, 0, 0, 0.698987, 0, 0, 0, 17.2862, 0, -3.8793
 shape = SubResource("CylinderShape3D_pillar")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CenterTower"]
-transform = Transform3D(18.4945, 0, 0, 0, 0.698987, 0, 0, 0, 8.63522, 0, -3.87935, 0)
+transform = Transform3D(18.4945, 0, 0, 0, 0.698987, 0, 0, 0, 8.63522, -1.10517, -3.87935, -9.19421)
 mesh = SubResource("CylinderMesh_pillar")
 surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
 
@@ -190,6 +190,7 @@ physics_material_override = SubResource("PhysicsMaterial_ground")
 shape = SubResource("BoxShape3D_box")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Box2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.16441, 0, 0.708175)
 mesh = SubResource("BoxMesh_box")
 surface_material_override/0 = SubResource("StandardMaterial3D_box")
 
