@@ -1,7 +1,7 @@
 extends RigidBody3D
 
 @export var speed = 30.0
-@export var lifetime = 20.0  # 20秒に延長
+@export var lifetime = 30.0  # 30秒に延長
 @export var damage = 25  # 1発25ダメージ（4発で倒せる）
 @export var fade_start_time = 10.0  # 10秒後からフェード開始
 

@@ -676,18 +676,18 @@ func update_overhead_health_display():
 func setup_reload_timer():
 	# リロードタイマーを作成
 	reload_timer = Timer.new()
-	reload_timer.wait_time = 1.0  # 1秒間隔
+	reload_timer.wait_time = 3.0  # 3秒間隔
 	reload_timer.one_shot = false  # 繰り返し実行
 	reload_timer.timeout.connect(_on_reload_timer_timeout)
 	add_child(reload_timer)
 	reload_timer.start()
-	print("Reload timer started - refill 1 ammo every 1 second")
+	print("Reload timer started - refill 1 ammo every 3 seconds")
 
 func _on_reload_timer_timeout():
 	# 弾数が最大でない場合のみリロード
 	if current_ammo < max_ammo:
 		current_ammo += 1
-		print("Ammo reloaded: ", current_ammo, "/", max_ammo)
+		print("Ammo reloaded: ", current_ammo, "/", max_ammo, " (every 3 seconds)")
 	
 	# GameUIがある場合は弾数表示を更新
 	update_ammo_display()
