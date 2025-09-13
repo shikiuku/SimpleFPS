@@ -7,19 +7,19 @@ friction = 0.5
 bounce = 0.5
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
-size = Vector3(40, 1, 40)
+size = Vector3(160, 1, 160)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ground"]
-size = Vector3(40, 1, 40)
+size = Vector3(160, 1, 160)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
 albedo_color = Color(0.7, 0.8, 0.7, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
-size = Vector3(1, 6, 42)
+size = Vector3(1, 10, 162)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall"]
-size = Vector3(1, 6, 42)
+size = Vector3(1, 10, 162)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
 albedo_color = Color(0.5, 0.3, 0.2, 1)
@@ -78,7 +78,7 @@ mesh = SubResource("BoxMesh_ground")
 surface_material_override/0 = SubResource("StandardMaterial3D_ground")
 
 [node name="Wall_East" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.5, 3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 79.5, 5, 0)
 collision_layer = 2
 collision_mask = 0
 
@@ -90,7 +90,7 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_West" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.5, 3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -79.5, 5, 0)
 collision_layer = 2
 collision_mask = 0
 
@@ -102,7 +102,7 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_North" type="StaticBody3D" parent="."]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 3, 19.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 5, 79.5)
 collision_layer = 2
 collision_mask = 0
 
@@ -114,7 +114,7 @@ mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="Wall_South" type="StaticBody3D" parent="."]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 3, -19.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 5, -79.5)
 collision_layer = 2
 collision_mask = 0
 
