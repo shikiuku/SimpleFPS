@@ -24,8 +24,8 @@ func _ready():
 	collision_layer = 4  # layer 3 (Projectiles)
 	collision_mask = 3   # layer 1 (Player = bit 0) + layer 2 (Environment = bit 1)
 	
-	# RigidBody3Dの設定（.tscnファイルが設定を失うため強制的に設定）
-	gravity_scale = 1.0
+	# RigidBody3Dの設定
+	gravity_scale = 0.0   # FPSゲームでは弾丸は重力の影響を受けない
 	continuous_cd = true  # 連続衝突検出を有効化
 	contact_monitor = true  # 接触監視を有効化
 	max_contacts_reported = 10  # 最大接触報告数
@@ -40,7 +40,7 @@ func _ensure_physics_settings():
 	# 物理設定を確実に適用
 	collision_layer = 4
 	collision_mask = 3
-	gravity_scale = 1.0
+	gravity_scale = 0.0
 	continuous_cd = true
 	contact_monitor = true
 	max_contacts_reported = 10
