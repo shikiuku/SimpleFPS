@@ -29,25 +29,7 @@ const BUTTON_COOLDOWN_TIME = 0.05  # 50msクールダウン
 const JOYSTICK_AREA_RATIO = 0.4  # 左40%はジョイスティック専用
 const JOYSTICK_MAX_DISTANCE = 60.0
 
-func _ready():
-	print("Simple Mobile UI - ジョイスティック、視点移動、ボタン付き")
-	
-	# ジョイスティック非表示
-	if joystick_visual:
-		joystick_visual.visible = false
-	
-	# ボタンのシグナル接続（即座反応のためbutton_downを使用）
-	if shoot_button:
-		shoot_button.button_down.connect(_on_shoot_button_down)
-		print("Shoot button connected to button_down signal")
-	if jump_button:
-		jump_button.button_down.connect(_on_jump_button_down)
-		print("Jump button connected to button_down signal")
-	if dash_button:
-		dash_button.button_down.connect(_on_dash_button_down)
-		print("Dash button connected to button_down signal")
-	
-	print("Simple Mobile UI ready!")
+# **古いready関数は下部に移動済み**
 
 # **デュアル処理システム - ボタンとジョイスティックを同時処理**
 func _input(event):
@@ -138,10 +120,11 @@ func _handle_touch_start(touch_id: int, pos: Vector2, area_type: String):
 		print("JOYSTICK START: ID=", touch_id)
 		
 	elif area_type == "view":
-		# **視点操作エリア（1本のみ）**
+		# **視点操作エリア（既存があれば置き換え）**
 		if _has_view_touch():
-			print("VIEW: Already active, ignoring touch ID=", touch_id)
-			return
+			print("VIEW: Existing touch found, replacing with new touch ID=", touch_id)
+			# 既存の視点タッチを削除
+			_clear_view_touches()
 		
 		active_touches[touch_id] = {
 			"type": "view",
@@ -215,13 +198,12 @@ func _handle_view_drag(current_pos: Vector2, touch_data: Dictionary):
 	var last_pos = touch_data.last_pos
 	var delta = current_pos - last_pos
 	
-	# 異常な移動量をフィルタリング（ジャンプ防止）
-	var max_delta = 50.0  # 1フレームでの最大移動量
+	# 異常な移動量をフィルタリング（制限を緩く）
+	var max_delta = 200.0  # 1フレームでの最大移動量を大幅に緩和
 	if delta.length() > max_delta:
-		print("VIEW: Abnormal delta detected, ignoring: ", delta)
-		# 座標だけ更新して、視点変更はスキップ
-		touch_data.last_pos = current_pos
-		return
+		print("VIEW: Extreme delta detected, clamping: ", delta)
+		# 完全に無視するのではなく、制限内にクランプ
+		delta = delta.normalized() * max_delta
 	
 	# 通常の視点変更処理
 	var view_input_vector = delta * 2.0  # 感度
@@ -244,7 +226,25 @@ func _has_view_touch() -> bool:
 			return true
 	return false
 
-# **強制削除関数は削除 - 代わりにタッチを無視する方式に変更**
+# **視点タッチのクリア**
+func _clear_view_touches():
+	var to_remove = []
+	for touch_id in active_touches:
+		if active_touches[touch_id].type == "view":
+			to_remove.append(touch_id)
+	
+	for touch_id in to_remove:
+		active_touches.erase(touch_id)
+		print("VIEW TOUCH CLEARED: ID=", touch_id)
+
+# **デバッグ用タッチ状態表示**
+func _print_touch_debug():
+	print("=== TOUCH DEBUG ===")
+	print("Active touches: ", active_touches.size())
+	for touch_id in active_touches:
+		var touch_data = active_touches[touch_id]
+		print("  ID=", touch_id, " Type=", touch_data.type)
+	print("===================")
 
 # **ボタン処理 - 即座反応 + クールダウン制御**
 func _on_shoot_button_down():
@@ -287,10 +287,53 @@ func _set_button_cooldown(button_name: String):
 
 # **古いボタン領域チェック関数は削除 - 新しい3エリア分割システムを使用**
 
-# **緊急リセット**
+# **緊急リセット - 強化版**
 func _notification(what):
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		print("=== EMERGENCY RESET ===")
-		active_touches.clear()
-		_hide_joystick()
-		move_input.emit(Vector2.ZERO)
+		_emergency_reset()
+
+# **完全リセット関数**
+func _emergency_reset():
+	print("=== FULL EMERGENCY RESET ===")
+	_print_touch_debug()  # リセット前の状態を確認
+	active_touches.clear()
+	_hide_joystick()
+	move_input.emit(Vector2.ZERO)
+	button_cooldown.clear()
+	print("All touches and cooldowns cleared!")
+
+# **定期的なクリーンアップ**
+func _ready():
+	print("Simple Mobile UI - ジョイスティック、視点移動、ボタン付き")
+	
+	# ジョイスティック非表示
+	if joystick_visual:
+		joystick_visual.visible = false
+	
+	# ボタンのシグナル接続（即座反応のためbutton_downを使用）
+	if shoot_button:
+		shoot_button.button_down.connect(_on_shoot_button_down)
+		print("Shoot button connected to button_down signal")
+	if jump_button:
+		jump_button.button_down.connect(_on_jump_button_down)
+		print("Jump button connected to button_down signal")
+	if dash_button:
+		dash_button.button_down.connect(_on_dash_button_down)
+		print("Dash button connected to button_down signal")
+	
+	# **定期的なクリーンアップタイマー**
+	var cleanup_timer = Timer.new()
+	cleanup_timer.wait_time = 5.0  # 5秒ごと
+	cleanup_timer.timeout.connect(_periodic_cleanup)
+	cleanup_timer.autostart = true
+	add_child(cleanup_timer)
+	
+	print("Simple Mobile UI ready!")
+
+# **定期的クリーンアップ**
+func _periodic_cleanup():
+	if active_touches.size() > 3:  # 異常に多いタッチがある場合
+		print("WARNING: Too many active touches (", active_touches.size(), "), performing cleanup")
+		_print_touch_debug()
+		_emergency_reset()
