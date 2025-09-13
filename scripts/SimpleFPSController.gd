@@ -14,6 +14,8 @@ extends CharacterBody3D
 @onready var camera_holder = $CameraHolder
 @onready var mesh_instance = $MeshInstance3D
 @onready var view_direction_line = $ViewDirectionLine
+@onready var health_bar_ui = $HealthBarUI/SubViewport/HealthBarControl/PlayerHealthBar
+@onready var health_label_ui = $HealthBarUI/SubViewport/HealthBarControl/PlayerHealthBar/PlayerHealthLabel
 
 # 視点回転を絶対値で管理
 var current_y_rotation = 0.0  # 水平回転
@@ -63,6 +65,9 @@ func _ready():
 	current_health = max_health
 	is_dead = false
 	
+	# プレイヤー上部のHP表示を初期化
+	call_deferred("update_overhead_health_display")
+	
 	# リスポーン処理をチェック（死亡シーンから戻ってきた場合）
 	if RespawnManager.should_respawn and is_multiplayer_authority():
 		call_deferred("handle_respawn_return")
@@ -86,6 +91,12 @@ func setup_multiplayer():
 		
 		camera.current = true
 		mesh_instance.visible = false
+		
+		# 自分のプレイヤーには頭上HP表示は不要なので非表示
+		if $HealthBarUI:
+			$HealthBarUI.visible = false
+			print("Overhead health display hidden for local player")
+		
 		print("Local player initialized: ", name, " (BLUE - INVISIBLE TO SELF)")
 	else:
 		# 他のプレイヤー（リモート）
@@ -98,6 +109,9 @@ func setup_multiplayer():
 			mesh_instance.visible = false
 			if view_direction_line:
 				view_direction_line.visible = false
+			# Player1のHP表示も非表示
+			if $HealthBarUI:
+				$HealthBarUI.visible = false
 			print("Server player (Player1) - HIDDEN")
 			return
 		
@@ -106,6 +120,11 @@ func setup_multiplayer():
 		# 視点方向ラインを表示（他プレイヤーのみ、Player1以外）
 		if view_direction_line:
 			view_direction_line.visible = true
+		
+		# 他のプレイヤーにはHP表示を表示
+		if $HealthBarUI:
+			$HealthBarUI.visible = true
+			print("Overhead health display enabled for remote player: ", name)
 		
 		# プレイヤーIDに基づいて色を決定
 		var player_color = get_player_color(player_id)
@@ -484,6 +503,9 @@ func take_damage(amount: int):
 	current_health -= amount
 	print("Player ", name, " took ", amount, " damage. Health: ", current_health, "/", max_health)
 	
+	# プレイヤー上部のHP表示を更新
+	update_overhead_health_display()
+	
 	if current_health <= 0:
 		print("Player health reached 0 - calling die()")
 		die()
@@ -546,6 +568,9 @@ func respawn():
 	global_position = Vector3(0, 2, 0)
 	velocity = Vector3.ZERO
 	
+	# プレイヤー上部のHP表示を更新
+	update_overhead_health_display()
+	
 	# タイマーを削除
 	if respawn_timer:
 		respawn_timer.queue_free()
@@ -575,7 +600,41 @@ func handle_respawn_return():
 	set_physics_process(true)
 	visible = true
 	
+	# プレイヤー上部のHP表示を更新
+	update_overhead_health_display()
+	
 	# リスポーンフラグをクリア
 	RespawnManager.clear_respawn_flag()
 	
 	print("Player respawned successfully at position: ", global_position)
+
+# プレイヤー上部のHP表示を更新する関数
+func update_overhead_health_display():
+	# ノードが存在するかチェック
+	if health_bar_ui == null or health_label_ui == null:
+		return
+	
+	# HPバーの値を更新
+	health_bar_ui.max_value = max_health
+	health_bar_ui.value = current_health
+	
+	# HPラベルの文字を更新
+	health_label_ui.text = str(current_health)
+	
+	# HPバーの色を体力に応じて変更
+	var health_percentage = float(current_health) / float(max_health)
+	var bar_color = Color.WHITE
+	
+	if health_percentage <= 0.25:
+		bar_color = Color.RED
+	elif health_percentage <= 0.5:
+		bar_color = Color.ORANGE
+	elif health_percentage <= 0.75:
+		bar_color = Color.YELLOW
+	else:
+		bar_color = Color.GREEN
+	
+	# ProgressBarの色を変更
+	health_bar_ui.modulate = bar_color
+	
+	print("Updated overhead health display for ", name, " - HP: ", current_health, "/", max_health, " Color: ", bar_color)

@@ -2,11 +2,12 @@ extends CanvasLayer
 
 @onready var version_label = $VersionLabel
 @onready var player_count_label = $PlayerCountLabel
-@onready var health_label = $HealthLabel
+@onready var health_bar = $HealthBar
+@onready var health_label = $HealthBar/HealthLabel
 @onready var kill_notification_label = $KillNotificationLabel
 
 # ゲームのバージョン
-const VERSION = "v1.7.49"
+const VERSION = "v1.7.50"
 
 func _ready():
 	# バージョンを表示
@@ -59,9 +60,9 @@ func update_player_count():
 		print("All peers: ", peers, " My ID: ", my_id, " Real players: ", peer_count)
 
 func update_health_display():
-	# HealthLabelが存在するか確認
-	if not health_label:
-		print("ERROR: HealthLabel not found!")
+	# HealthBarとHealthLabelが存在するか確認
+	if not health_bar or not health_label:
+		print("ERROR: HealthBar or HealthLabel not found!")
 		return
 	
 	# ローカルプレイヤーのHPを取得
@@ -71,27 +72,46 @@ func update_health_display():
 		var current_hp = local_player.get_health()
 		var max_hp = local_player.get_max_health()
 		
+		# HPバーの値を更新
+		health_bar.max_value = max_hp
+		health_bar.value = current_hp
+		
 		# HPバーの色を変更（低いほど赤く）
 		var health_percentage = float(current_hp) / float(max_hp)
-		var color = Color.WHITE
+		var bar_color = Color.WHITE
+		var text_color = Color.WHITE
 		
 		if health_percentage <= 0.25:
-			color = Color.RED
+			bar_color = Color.RED
+			text_color = Color.WHITE
 		elif health_percentage <= 0.5:
-			color = Color.ORANGE
+			bar_color = Color.ORANGE
+			text_color = Color.WHITE
 		elif health_percentage <= 0.75:
-			color = Color.YELLOW
+			bar_color = Color.YELLOW
+			text_color = Color.BLACK
+		else:
+			bar_color = Color.GREEN
+			text_color = Color.WHITE
 		
+		# ProgressBarの色を設定
+		health_bar.modulate = bar_color
+		
+		# テキストの更新と色設定
 		health_label.text = "♥ HP: " + str(current_hp) + "/" + str(max_hp)
-		health_label.modulate = color
+		health_label.modulate = text_color
 		
 		# 死亡時の表示
 		if local_player.is_dead:
 			health_label.text = "💀 DEAD - Respawning..."
 			health_label.modulate = Color.RED
+			health_bar.modulate = Color.RED
+			health_bar.value = 0
 	else:
 		health_label.text = "♥ HP: --/--"
 		health_label.modulate = Color.WHITE
+		health_bar.modulate = Color.WHITE
+		health_bar.value = 0
 
 func get_local_player():
 	# ローカルプレイヤー（権限を持つプレイヤー）を探す
