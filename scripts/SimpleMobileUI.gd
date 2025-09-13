@@ -1,6 +1,6 @@
 extends Control
 
-# **シンプルモバイルUI v1.0.0 - ジョイスティックと視点移動のみ**
+# **シンプルモバイルUI v2.0.0 - 3エリア分割設計**
 
 signal move_input(input: Vector2)
 signal view_input(relative: Vector2)
@@ -23,9 +23,12 @@ var active_touches = {}  # touch_id -> touch_data
 
 # ボタンクールダウン管理（重複防止）
 var button_cooldown = {}
-const BUTTON_COOLDOWN_TIME = 0.05  # 50msクールダウン（より短時間で連続操作可能）
+const BUTTON_COOLDOWN_TIME = 0.05  # 50msクールダウン
 
-# 定数
+# 定数 - 3エリア分割
+const JOYSTICK_AREA_RATIO = 0.4  # 左40%
+const VIEW_AREA_RATIO = 0.2      # 中央20%
+const BUTTON_AREA_RATIO = 0.4    # 右40%
 const JOYSTICK_MAX_DISTANCE = 60.0
 
 func _ready():
@@ -48,7 +51,7 @@ func _ready():
 	
 	print("Simple Mobile UI ready!")
 
-# **マルチタッチ対応タッチ処理 - ボタンとジョイスティックの並行操作を許可**
+# **3エリア分割タッチ処理 - 明確なエリア分け**
 func _input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
@@ -57,39 +60,46 @@ func _input(event):
 	var touch_pos = event.position
 	var touch_id = event.index
 	
-	# **ボタン領域チェック - ボタン領域内のタッチはボタンに優先権を与える**
-	if _is_in_button_area(touch_pos):
-		print("BUTTON AREA: Touch ", touch_id, " is in button area - letting UI handle")
-		# ボタン領域のタッチはUIに任せる（イベント消費せず、早期リターン）
-		return  
+	# **3つのエリアを判定**
+	var area_type = _get_touch_area(touch_pos, screen_size)
 	
-	# **シンプルな画面分割: 左50% = ジョイスティック、右50% = 視点**
-	var is_left_side = touch_pos.x < screen_size.x * 0.5
+	print("TOUCH EVENT: ID=", touch_id, " Pos=", touch_pos, " Area=", area_type)
 	
-	# タッチ開始
+	# **ボタンエリアのタッチは完全にボタンに任せる**
+	if area_type == "button":
+		print("BUTTON AREA: Letting buttons handle touch ID=", touch_id)
+		return  # イベント消費せず、ボタンに任せる
+	
+	# **ジョイスティック・視点エリアのタッチを処理**
 	if event is InputEventScreenTouch and event.pressed:
-		print("TOUCH START: ID=", touch_id, " Pos=", touch_pos, " Side=", "LEFT" if is_left_side else "RIGHT")
-		_handle_touch_start(touch_id, touch_pos, is_left_side)
-		# ボタン領域外のタッチのみイベント消費
+		_handle_touch_start(touch_id, touch_pos, area_type)
 		get_viewport().set_input_as_handled()
 	
-	# タッチ終了
 	elif event is InputEventScreenTouch and not event.pressed:
-		print("TOUCH END: ID=", touch_id)
 		_handle_touch_end(touch_id)
 		get_viewport().set_input_as_handled()
 	
-	# ドラッグ
 	elif event is InputEventScreenDrag:
-		print("TOUCH DRAG: ID=", touch_id, " Pos=", touch_pos)
 		_handle_touch_drag(touch_id, touch_pos, event.relative)
 		get_viewport().set_input_as_handled()
 
-func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
-	if is_left_side:
-		# **左側 = ジョイスティック（1本のみ） - 既存タッチがある場合は無視**
+# **3エリア判定関数**
+func _get_touch_area(pos: Vector2, screen_size: Vector2) -> String:
+	var joystick_boundary = screen_size.x * JOYSTICK_AREA_RATIO
+	var view_boundary = screen_size.x * (JOYSTICK_AREA_RATIO + VIEW_AREA_RATIO)
+	
+	if pos.x < joystick_boundary:
+		return "joystick"
+	elif pos.x < view_boundary:
+		return "view"
+	else:
+		return "button"
+
+func _handle_touch_start(touch_id: int, pos: Vector2, area_type: String):
+	if area_type == "joystick":
+		# **ジョイスティックエリア（1本のみ）**
 		if _has_joystick_touch():
-			print("JOYSTICK: Already has active joystick touch, ignoring new touch ID=", touch_id)
+			print("JOYSTICK: Already active, ignoring touch ID=", touch_id)
 			return
 		
 		active_touches[touch_id] = {
@@ -97,22 +107,19 @@ func _handle_touch_start(touch_id: int, pos: Vector2, is_left_side: bool):
 			"center": pos
 		}
 		_show_joystick_at(pos)
-		print("JOYSTICK START: ID=", touch_id, " - Buttons should still work!")
+		print("JOYSTICK START: ID=", touch_id)
 		
-	else:
-		# **右側 = 視点操作 - ボタン領域は既に除外済み**
-		# ボタン領域内のタッチは_unhandled_inputでフィルタ済みなのでここには来ない
-		
-		# **視点（1本のみ） - 既存タッチがある場合は無視**
+	elif area_type == "view":
+		# **視点操作エリア（1本のみ）**
 		if _has_view_touch():
-			print("VIEW: Already has active view touch, ignoring new touch ID=", touch_id)
+			print("VIEW: Already active, ignoring touch ID=", touch_id)
 			return
 		
 		active_touches[touch_id] = {
 			"type": "view",
 			"last_pos": pos
 		}
-		print("VIEW START: ID=", touch_id, " - Buttons should still work!")
+		print("VIEW START: ID=", touch_id)
 
 func _handle_touch_end(touch_id: int):
 	if touch_id not in active_touches:
@@ -142,13 +149,7 @@ func _handle_touch_drag(touch_id: int, pos: Vector2, _relative: Vector2):
 		_handle_joystick_drag(pos, touch_data.center)
 		
 	elif touch_data.type == "view":
-		# ドラッグ中にボタン領域に入ったら視点操作を中断
-		if _is_in_button_area(pos):
-			print("VIEW: Entered button area, ending view touch")
-			active_touches.erase(touch_id)
-			return
-		
-		# relativeを使わず、絶対座標で計算
+		# 絶対座標で安全な視点計算
 		_handle_view_drag(pos, touch_data)
 
 # **ジョイスティック処理**
@@ -256,37 +257,7 @@ func _is_button_on_cooldown(button_name: String) -> bool:
 func _set_button_cooldown(button_name: String):
 	button_cooldown[button_name] = Time.get_ticks_msec() / 1000.0
 
-# **ボタン領域チェック - より堅牢な判定**
-func _is_in_button_area(pos: Vector2) -> bool:
-	if not shoot_button or not jump_button:
-		print("BUTTON CHECK: Buttons not found")
-		return false
-	
-	# ボタンのグローバル位置とサイズを取得
-	var shoot_rect = Rect2(shoot_button.global_position, shoot_button.size)
-	var jump_rect = Rect2(jump_button.global_position, jump_button.size)
-	
-	# ダッシュボタンも追加（存在する場合）
-	var dash_rect = Rect2()
-	if dash_button:
-		dash_rect = Rect2(dash_button.global_position, dash_button.size)
-	
-	# より大きなマージンでボタンを押しやすく（30ピクセル）
-	var margin = 30
-	shoot_rect = shoot_rect.grow(margin)
-	jump_rect = jump_rect.grow(margin)
-	if dash_button:
-		dash_rect = dash_rect.grow(margin)
-	
-	var in_shoot = shoot_rect.has_point(pos)
-	var in_jump = jump_rect.has_point(pos)
-	var in_dash = dash_button and dash_rect.has_point(pos)
-	var in_button_area = in_shoot or in_jump or in_dash
-	
-	if in_button_area:
-		print("BUTTON CHECK: Touch in button area - Shoot:", in_shoot, " Jump:", in_jump, " Dash:", in_dash, " Pos:", pos)
-	
-	return in_button_area
+# **古いボタン領域チェック関数は削除 - 新しい3エリア分割システムを使用**
 
 # **緊急リセット**
 func _notification(what):
