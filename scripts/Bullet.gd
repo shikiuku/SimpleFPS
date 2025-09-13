@@ -94,6 +94,15 @@ func _physics_process(delta):
 		is_pickable = true
 		# 衝突マスクにプレイヤーレイヤーを追加（拾われる用）
 		collision_layer = collision_layer | 8  # 拾い物レイヤーを追加
+		
+		# 拾いやすくするために当たり判定を大きくする
+		var collision_shape = $CollisionShape3D
+		if collision_shape and collision_shape.shape:
+			var shape = collision_shape.shape as SphereShape3D
+			if shape:
+				shape.radius = 0.8  # 元の0.2から0.8に拡大（4倍）
+				print("Pickup collision radius expanded to 0.8")
+		
 		print("Bullet turned white instantly and is now pickable")
 	
 	# レイキャスト衝突検出
