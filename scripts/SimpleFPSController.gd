@@ -244,8 +244,8 @@ func _on_mobile_view_input(delta: Vector2):
 		print("Mobile view input: ", delta)
 		
 		# 絶対値で回転を管理（飛ばされる問題を根本解決）
-		current_y_rotation -= delta.x * 0.002  # 感度調整
-		current_x_rotation -= delta.y * 0.002
+		current_y_rotation -= delta.x * 0.0024  # 感度調整（1.2倍に調整）
+		current_x_rotation -= delta.y * 0.0024
 		
 		# 垂直回転は-90度から90度に制限
 		current_x_rotation = clamp(current_x_rotation, deg_to_rad(-90), deg_to_rad(90))
