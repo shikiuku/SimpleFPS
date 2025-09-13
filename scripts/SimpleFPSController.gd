@@ -703,3 +703,9 @@ func get_ammo() -> int:
 
 func get_max_ammo() -> int:
 	return max_ammo
+
+# 弾を追加する関数（白い弾を拾った時用）
+func add_ammo(amount: int):
+	current_ammo = min(current_ammo + amount, max_ammo)
+	print("Added ", amount, " ammo. Current ammo: ", current_ammo, "/", max_ammo)
+	update_ammo_display()

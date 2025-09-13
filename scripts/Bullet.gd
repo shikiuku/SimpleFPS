@@ -1,11 +1,16 @@
 extends RigidBody3D
 
 @export var speed = 30.0
-@export var lifetime = 10.0
+@export var lifetime = 20.0  # 20秒に延長
 @export var damage = 25  # 1発25ダメージ（4発で倒せる）
+@export var fade_start_time = 10.0  # 10秒後からフェード開始
 
 var direction = Vector3.ZERO
 var shooter_id = -1  # 射撃者のID
+var original_color = Color.WHITE  # 元の色を保存
+var is_pickable = false  # 拾えるかどうか
+var lifetime_timer = 0.0  # 経過時間を追跡
+
 @onready var mesh_instance = $MeshInstance3D
 
 func _ready():
@@ -73,8 +78,32 @@ func _physics_process(delta):
 		queue_free()
 		return
 	
+	# 経過時間を更新
+	lifetime_timer += delta
+	
+	# 10秒後から色をフェード
+	if lifetime_timer >= fade_start_time:
+		var fade_progress = (lifetime_timer - fade_start_time) / fade_start_time  # 0.0 から 1.0
+		fade_progress = clamp(fade_progress, 0.0, 1.0)
+		
+		# 色を白にフェード
+		if mesh_instance:
+			var material = mesh_instance.get_surface_override_material(0)
+			if material:
+				var current_color = original_color.lerp(Color.WHITE, fade_progress)
+				material.albedo_color = current_color
+				# エミッションも調整
+				material.emission = current_color * 0.3 * (1.0 - fade_progress)
+				
+				# 完全に白になったら拾えるようにする
+				if fade_progress >= 1.0 and not is_pickable:
+					is_pickable = true
+					# 衝突マスクにプレイヤーレイヤーを追加（拾われる用）
+					collision_layer = collision_layer | 8  # 拾い物レイヤーを追加
+					print("Bullet is now pickable (white)")
+	
 	# レイキャスト衝突検出
-	if not has_hit:
+	if not has_hit and not is_pickable:  # 拾える状態になったら攻撃判定を無効化
 		check_raycast_collision()
 
 func set_velocity(dir: Vector3):
@@ -85,6 +114,7 @@ func _on_lifetime_timeout():
 
 # プレイヤーの色に合わせて弾丸の色を設定
 func set_bullet_color(color: Color):
+	original_color = color  # 元の色を保存
 	if mesh_instance:
 		var material = StandardMaterial3D.new()
 		material.albedo_color = color
@@ -127,13 +157,24 @@ func _handle_collision(body):
 	print("Bullet hit body: ", body.name, " (Type: ", body.get_class(), ")")
 	print("Body collision layer: ", body.collision_layer, " mask: ", body.collision_mask)
 	print("Shooter ID: ", shooter_id, " Hit body name: ", body.name)
+	print("Is pickable: ", is_pickable)
 	print("Body has take_damage method: ", body.has_method("take_damage"))
 	print("Body is CharacterBody3D: ", body is CharacterBody3D)
 	
 	has_hit = true  # ヒット処理済みフラグを立てる
 	
-	# プレイヤーに当たった場合（CharacterBody3Dでかつtake_damageメソッドがある）
+	# プレイヤーに当たった場合
 	if body is CharacterBody3D and body.has_method("take_damage"):
+		# 白い弾（拾える状態）の場合
+		if is_pickable:
+			print("=== PICKING UP WHITE BULLET ===")
+			# プレイヤーに弾を補充
+			if body.has_method("add_ammo"):
+				body.add_ammo(1)  # 1発補充
+				print("Player ", body.name, " picked up 1 ammo")
+			# 弾を削除
+			call_deferred("queue_free")
+			return
 		# 自分の弾が自分に当たった場合は無視
 		var hit_player_id = body.name.to_int()
 		print("Hit player ID: ", hit_player_id, " vs Shooter ID: ", shooter_id)
