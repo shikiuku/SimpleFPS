@@ -51,7 +51,7 @@ func _ready():
 	
 	print("Simple Mobile UI ready!")
 
-# **3エリア分割タッチ処理 - 明確なエリア分け**
+# **デュアル処理システム - ボタンとジョイスティックを同時処理**
 func _input(event):
 	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		return
@@ -65,23 +65,40 @@ func _input(event):
 	
 	print("TOUCH EVENT: ID=", touch_id, " Pos=", touch_pos, " Area=", area_type)
 	
-	# **ボタンエリアのタッチは完全にボタンに任せる**
-	if area_type == "button":
-		print("BUTTON AREA: Letting buttons handle touch ID=", touch_id)
-		return  # イベント消費せず、ボタンに任せる
+	# **ボタンエリア - 手動でボタン押下をチェック**
+	if area_type == "button" and event is InputEventScreenTouch and event.pressed:
+		print("BUTTON AREA: Manually checking button press")
+		_handle_manual_button_press(touch_pos)
+		return  # ボタン処理のみで終了
 	
-	# **ジョイスティック・視点エリアのタッチを処理**
-	if event is InputEventScreenTouch and event.pressed:
-		_handle_touch_start(touch_id, touch_pos, area_type)
-		get_viewport().set_input_as_handled()
-	
-	elif event is InputEventScreenTouch and not event.pressed:
-		_handle_touch_end(touch_id)
-		get_viewport().set_input_as_handled()
-	
-	elif event is InputEventScreenDrag:
-		_handle_touch_drag(touch_id, touch_pos, event.relative)
-		get_viewport().set_input_as_handled()
+	# **ジョイスティック・視点エリア - 通常処理**
+	if area_type != "button":
+		if event is InputEventScreenTouch and event.pressed:
+			_handle_touch_start(touch_id, touch_pos, area_type)
+		
+		elif event is InputEventScreenTouch and not event.pressed:
+			_handle_touch_end(touch_id)
+		
+		elif event is InputEventScreenDrag:
+			_handle_touch_drag(touch_id, touch_pos, event.relative)
+
+# **手動ボタン押下チェック**
+func _handle_manual_button_press(pos: Vector2):
+	# 各ボタンの領域をチェックして手動で実行
+	if shoot_button and _is_point_in_button(pos, shoot_button):
+		print("MANUAL SHOOT BUTTON PRESS!")
+		_on_shoot_button_down()
+	elif jump_button and _is_point_in_button(pos, jump_button):
+		print("MANUAL JUMP BUTTON PRESS!")
+		_on_jump_button_down()
+	elif dash_button and _is_point_in_button(pos, dash_button):
+		print("MANUAL DASH BUTTON PRESS!")
+		_on_dash_button_down()
+
+# **ボタン領域チェック**
+func _is_point_in_button(point: Vector2, button: Button) -> bool:
+	var button_rect = button.get_global_rect()
+	return button_rect.has_point(point)
 
 # **3エリア判定関数**
 func _get_touch_area(pos: Vector2, screen_size: Vector2) -> String:
