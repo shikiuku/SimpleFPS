@@ -21,6 +21,10 @@ signal dash_pressed
 # タッチ管理
 var active_touches = {}  # touch_id -> touch_data
 
+# ボタンクールダウン管理（重複防止）
+var button_cooldown = {}
+const BUTTON_COOLDOWN_TIME = 0.1  # 100msクールダウン
+
 # 定数
 const JOYSTICK_MAX_DISTANCE = 60.0
 
@@ -31,13 +35,16 @@ func _ready():
 	if joystick_visual:
 		joystick_visual.visible = false
 	
-	# ボタンのシグナル接続
+	# ボタンのシグナル接続（即座反応のためbutton_downを使用）
 	if shoot_button:
-		shoot_button.pressed.connect(_on_shoot_button_pressed)
+		shoot_button.button_down.connect(_on_shoot_button_down)
+		print("Shoot button connected to button_down signal")
 	if jump_button:
-		jump_button.pressed.connect(_on_jump_button_pressed)
+		jump_button.button_down.connect(_on_jump_button_down)
+		print("Jump button connected to button_down signal")
 	if dash_button:
-		dash_button.pressed.connect(_on_dash_button_pressed)
+		dash_button.button_down.connect(_on_dash_button_down)
+		print("Dash button connected to button_down signal")
 	
 	print("Simple Mobile UI ready!")
 
@@ -202,18 +209,44 @@ func _has_view_touch() -> bool:
 
 # **強制削除関数は削除 - 代わりにタッチを無視する方式に変更**
 
-# **ボタン処理**
-func _on_shoot_button_pressed():
-	print("SHOOT button pressed!")
+# **ボタン処理 - 即座反応 + クールダウン制御**
+func _on_shoot_button_down():
+	if _is_button_on_cooldown("shoot"):
+		return
+	
+	print("SHOOT button down - IMMEDIATE RESPONSE!")
 	shoot_pressed.emit()
+	_set_button_cooldown("shoot")
 
-func _on_jump_button_pressed():
-	print("JUMP button pressed!")
+func _on_jump_button_down():
+	if _is_button_on_cooldown("jump"):
+		return
+	
+	print("JUMP button down - IMMEDIATE RESPONSE!")
 	jump_pressed.emit()
+	_set_button_cooldown("jump")
 
-func _on_dash_button_pressed():
-	print("DASH button pressed!")
+func _on_dash_button_down():
+	if _is_button_on_cooldown("dash"):
+		return
+	
+	print("DASH button down - IMMEDIATE RESPONSE!")
 	dash_pressed.emit()
+	_set_button_cooldown("dash")
+
+# クールダウン管理
+func _is_button_on_cooldown(button_name: String) -> bool:
+	if button_name in button_cooldown:
+		var elapsed = Time.get_ticks_msec() / 1000.0 - button_cooldown[button_name]
+		if elapsed < BUTTON_COOLDOWN_TIME:
+			print("Button ", button_name, " on cooldown (", elapsed, "s)")
+			return true
+		else:
+			button_cooldown.erase(button_name)
+	return false
+
+func _set_button_cooldown(button_name: String):
+	button_cooldown[button_name] = Time.get_ticks_msec() / 1000.0
 
 # **ボタン領域チェック - より堅牢な判定**
 func _is_in_button_area(pos: Vector2) -> bool:
